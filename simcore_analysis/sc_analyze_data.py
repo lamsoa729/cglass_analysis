@@ -19,6 +19,22 @@ def flatten_dset(dset):
     return [item for sublist in dset for item in sublist]
 
 
+def xl_zrl_force(r_i, r_j, u_i, u_j, s_i, s_j, ks):
+    """!TODO: Docstring for xl_zrl_force.
+
+    @param r_i: TODO
+    @param r_j: TODO
+    @param u_i: TODO
+    @param u_j: TODO
+    @param s_i: TODO
+    @param s_j: TODO
+    @param ks: TODO
+    @return: TODO
+
+    """
+    return -ks * (r_j + (u_j * s_j) - r_i - (u_i * s_i))
+
+
 def analyze_xlink_moments(h5_data):
     anal_grp = h5_data['analysis']
     dbl_xlink_dset = h5_data['xl_data/doubly_bound']
@@ -69,3 +85,31 @@ def analyze_avg_xlink_distr(h5_data):
         'average_doubly_bound_distr', data=dbl_2D_distr)
     xl_avg_distr_dset.attrs['xedges'] = xedges
     xl_avg_distr_dset.attrs['yedges'] = yedges
+
+
+def analyze_xlink_force(h5_data):
+    """!Analyze the force on filament_j by crosslinkers attached to filament_i
+
+    @param h5_data: TODO
+    @return: TODO
+
+    """
+    xl_dbl_dset = h5_data['xl_data/doubly_bound']
+    ks = h5_data['xl_data'].attrs['k_spring']
+    fil_pos_dset = h5_data['filament_data/filament_position']
+    fil_orient_dset = h5_data['filament_data/filament_orientation']
+    u_i = fil_orient_dset[:, :, 0]
+    u_j = fil_orient_dset[:, :, 1]
+    r_i = fil_pos_dset[:, :, 0]
+    r_j = fil_pos_dset[:, :, 1]
+    xl_si = xl_dbl_dset[:, 0]
+    xl_sj = xl_dbl_dset[:, 1]
+    force_arr = np.zeros((len(u_i), 3))
+    for i in range(len(u_i)):
+        for xl in range(len(xl_si[i])):
+            force_arr[i, :] += xl_zrl_force(r_i[i], r_j[i],
+                                            u_i[i], u_j[i],
+                                            xl_si[i][xl], xl_sj[i][xl],
+                                            ks)
+    xl_force_dset = h5_data['analysis'].create_dataset('xl_forces',
+                                                       data=force_arr)

@@ -113,6 +113,8 @@ def get_xlink_data(h5_data, xlink_spec_fname):
             # Load frame data for doubly bound xlinks
             xl_dbl_dset[i, 0] = db_xlinks[:][0]
             xl_dbl_dset[i, 1] = db_xlinks[:][1]
+        # Subtract half the length of the filament from the lambda position so
+        # zero corresponds to center of the filament.
         xl_sgl_dset[...] -= half_length
         xl_dbl_dset[...] -= half_length
 
