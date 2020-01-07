@@ -84,7 +84,8 @@ def analyze_singly_bound_xlinks(h5_data):
                                                 range=[-half_l, half_l])
     xl_fil1_avg_distr, bin_edges = np.histogram(fil1_lambdas, 50,
                                                 range=[-half_l, half_l])
-    xl_sgl_avg_distr = np.stack((xl_fil0_avg_distr, xl_fil1_avg_distr))
+    xl_sgl_avg_distr = np.stack(
+        (xl_fil0_avg_distr, xl_fil1_avg_distr)).astype(float)
     xl_sgl_avg_distr *= float(n_spec / n_steps)
     xl_sgl_distr_dset = anal_grp.create_dataset('singly_bound_distr',
                                                 data=xl_sgl_avg_distr)
@@ -138,12 +139,19 @@ def analyze_xlink_force(h5_data):
     xl_si = xl_dbl_dset[:, 0]
     xl_sj = xl_dbl_dset[:, 1]
     force_arr = np.zeros((len(u_i), 3))
-    nsteps = len(u_i)
-    for i in range(nsteps):
+    torque_arr = np.zeros((len(u_i), 2, 3))
+    nframes = len(u_i)
+    for i in range(nframes):
         for xl in range(len(xl_si[i])):
-            force_arr[i, :] += xl_zrl_force(r_i[i], r_j[i],
-                                            u_i[i], u_j[i],
-                                            xl_si[i][xl], xl_sj[i][xl],
-                                            ks)
+            force = xl_zrl_force(r_i[i], r_j[i],
+                                 u_i[i], u_j[i],
+                                 xl_si[i][xl], xl_sj[i][xl],
+                                 ks)
+            force_arr[i, :] += force
+            torque_arr[i, 0, :] += np.cross(u_i[i] * xl_si[i][xl], -force)
+            torque_arr[i, 1, :] += np.cross(u_j[i] * xl_sj[i][xl], force)
+
     xl_force_dset = h5_data['analysis'].create_dataset('xl_forces',
                                                        data=force_arr)
+    xl_torque_dset = h5_data['analysis'].create_dataset('xl_torques',
+                                                        data=torque_arr)

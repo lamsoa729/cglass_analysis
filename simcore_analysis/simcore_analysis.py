@@ -21,9 +21,9 @@ def run_analysis(h5_data):
         del h5_data['analysis']  # Start clean
     analysis_grp = h5_data.create_group('analysis')
     # analyze xlinks
-    analyze_xlink_moments(h5_data)
-    analyze_avg_xlink_distr(h5_data)
     analyze_singly_bound_xlinks(h5_data)
+    analyze_avg_xlink_distr(h5_data)
+    analyze_xlink_moments(h5_data)
     analyze_xlink_force(h5_data)
     # analyze filaments (maybe)
 

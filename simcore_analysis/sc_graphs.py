@@ -43,5 +43,4 @@ def graph_avg_xlink_distr(h5_data, fig, ax):
     ax.set_aspect('equal')
     cf = ax.pcolormesh(fil_bins, fil_bins,
                        dbl_2D_distr.T / dbl_xlink_dset.shape[0])
-    ax.set_title('Average crosslink distribution')
     fig.colorbar(cf, ax=ax)
