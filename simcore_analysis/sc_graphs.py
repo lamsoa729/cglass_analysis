@@ -17,6 +17,8 @@ def graph_avg_xlink_distr(h5_data, fig, ax):
     Parameters
     ----------
     h5_data : TODO
+    fig : TODO
+    ax : TODO
 
     Returns
     -------
@@ -28,16 +30,12 @@ def graph_avg_xlink_distr(h5_data, fig, ax):
     length = h5_data['filament_data'].attrs['lengths'][0]
     fil_bins = np.linspace(-.5 * length, .5 * length, 120)
 
-    #fil_bins += (fil_bins[1]-fil_bins[0])*.5
     print(fil_bins)
     # Combine all time data to get an average density
     dbl_xlink_dset = h5_data['xl_data/doubly_bound']
     print(dbl_xlink_dset.shape[0])
-    #fil1_lambdas = [item for item in dbl_xlink_dset[i,0].tolist() for i in range(dbl_xlink_dset.shape[0])]
-    #fil1_lambdas = [item for lst in dbl_xlink_dset[:,0] for item in lst]
     fil0_lambdas = np.asarray(flatten_dset(dbl_xlink_dset[:, 0]))
     fil1_lambdas = np.asarray(flatten_dset(dbl_xlink_dset[:, 1]))
-    # print(fil1_lambdas)
     dbl_2D_distr, xedges, yedges = np.histogram2d(
         fil0_lambdas, fil1_lambdas, fil_bins)
     print(dbl_2D_distr)

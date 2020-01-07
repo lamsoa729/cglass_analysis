@@ -15,7 +15,7 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-HEADER_DT = np.dtype([('n_frames', np.int32),
+HEADER_DT = np.dtype([('n_steps', np.int32),
                       ('n_posit', np.int32),
                       ('delta', np.double)])
 
@@ -73,6 +73,10 @@ def init_data_file(h5_data, param_file_name):
         for key, val in param_dict.items():
             if not isinstance(val, list) and not isinstance(val, dict):
                 h5_data.attrs[key] = val
+    # xl_time_arr = h5_data.attrs['delta'] * np.arange(
+    #     h5_data.attrs['n_steps'],
+    #     param_dict['species']['n_spec'])
+    # h5_data.create_dataset('time', data=xl_time_arr)
 
 
 def get_xlink_data(h5_data, xlink_spec_fname):
@@ -85,6 +89,9 @@ def get_xlink_data(h5_data, xlink_spec_fname):
         print(header)
         nframes = int(header[0] / header[1])
         xl_grp = h5_data.create_group('xl_data')
+        xl_time_arr = np.arange(0, header[0], header[1]) * header[2]
+        xl_grp.create_dataset('time', data=xl_time_arr)
+
         for key, val in param_dict['crosslink'][0].items():
             xl_grp.attrs[key] = val
         # Create a variable length data type
@@ -126,15 +133,19 @@ def get_filament_data(h5_data, fil_posit_fname):
         header = np.fromfile(flf, HEADER_DT, count=1)[0]
         fil_num = 2  # TODO: Hard coded for the moment
         print(header)
+        nframes = int(header[0] / header[1])
         fil_grp = h5_data.create_group('filament_data')
+        fil_time_arr = np.arange(0, header[0], header[1]) * header[2]
+        fil_grp.create_dataset('time', data=fil_time_arr)
+
         for key, val in param_dict['rigid_filament'][0].items():
             fil_grp.attrs[key] = val
         # Create a data set that can store all the frames of the doubly bound
         # motors
-        fil_pos_dset = fil_grp.create_dataset('filament_position',
-                                              (int(header[0] / header[1]), 3, fil_num,))
-        fil_orient_dset = fil_grp.create_dataset('filament_orientation',
-                                                 (int(header[0] / header[1]), 3, fil_num,))
+        fil_pos_dset = fil_grp.create_dataset(
+            'filament_position', (nframes, 3, fil_num,))
+        fil_orient_dset = fil_grp.create_dataset(
+            'filament_orientation', (nframes, 3, fil_num,))
 
         for i in range(int(header[0] / header[1])):
             # Get number of filaments from file so we know how many to read in

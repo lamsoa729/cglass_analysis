@@ -47,4 +47,9 @@ setup(
     url='https://github.com/lamsoa729/simcore_analysis',
     version='0.1.0',
     zip_safe=False,
+    entry_points={
+        'console_scripts': [
+            'simcore_analysis = simcore_analysis.simcore_analysis:main',
+        ],
+    }
 )
