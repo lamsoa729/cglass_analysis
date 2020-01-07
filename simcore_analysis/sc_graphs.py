@@ -11,6 +11,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
+def flatten_dset(l): return [item for sublist in l for item in sublist]
+
+
 def graph_avg_xlink_distr(h5_data, fig, ax):
     """!TODO: Docstring for graph_avg_xlink_distr.
 
@@ -25,8 +28,6 @@ def graph_avg_xlink_distr(h5_data, fig, ax):
     TODO
 
     """
-    # h5_data = h5py.File('test_data.h5','r+')
-    def flatten_dset(l): return [item for sublist in l for item in sublist]
     length = h5_data['filament_data'].attrs['lengths'][0]
     fil_bins = np.linspace(-.5 * length, .5 * length, 120)
 
@@ -40,4 +41,7 @@ def graph_avg_xlink_distr(h5_data, fig, ax):
         fil0_lambdas, fil1_lambdas, fil_bins)
     print(dbl_2D_distr)
     ax.set_aspect('equal')
-    ax.pcolormesh(fil_bins, fil_bins, dbl_2D_distr.T)
+    cf = ax.pcolormesh(fil_bins, fil_bins,
+                       dbl_2D_distr.T / dbl_xlink_dset.shape[0])
+    ax.set_title('Average crosslink distribution')
+    fig.colorbar(cf, ax=ax)

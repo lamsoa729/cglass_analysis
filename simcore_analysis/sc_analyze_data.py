@@ -58,6 +58,39 @@ def analyze_xlink_moments(h5_data):
         'xl_second_moments', data=xl_second_mom_arr.T)
 
 
+def analyze_singly_bound_xlinks(h5_data):
+    """!TODO: Docstring for analyze_singly_bound_xlink_num.
+
+    @param h5_data: TODO
+    @return: TODO
+
+    """
+    anal_grp = h5_data['analysis']
+    xl_sgl_dset = h5_data['xl_data/singly_bound']
+
+    xl_sgl_num_arr = np.zeros((xl_sgl_dset.shape[0], 2))
+    for i, xl_arr in enumerate(xl_sgl_dset):
+        xl_sgl_num_arr[i, 0] = xl_arr[0].size
+        xl_sgl_num_arr[i, 1] = xl_arr[1].size
+    xl_sgl_num_dset = anal_grp.create_dataset('singly_bound_number',
+                                              data=xl_sgl_num_arr)
+
+    half_l = h5_data['filament_data'].attrs['lengths'][0] * .5
+    n_steps = h5_data.attrs['n_steps']
+    n_spec = h5_data['xl_data'].attrs['n_spec']
+    fil0_lambdas = np.asarray(flatten_dset(xl_sgl_dset[:, 0]))
+    fil1_lambdas = np.asarray(flatten_dset(xl_sgl_dset[:, 1]))
+    xl_fil0_avg_distr, bin_edges = np.histogram(fil0_lambdas, 50,
+                                                range=[-half_l, half_l])
+    xl_fil1_avg_distr, bin_edges = np.histogram(fil1_lambdas, 50,
+                                                range=[-half_l, half_l])
+    xl_sgl_avg_distr = np.stack((xl_fil0_avg_distr, xl_fil1_avg_distr))
+    xl_sgl_avg_distr *= float(n_spec / n_steps)
+    xl_sgl_distr_dset = anal_grp.create_dataset('singly_bound_distr',
+                                                data=xl_sgl_avg_distr)
+    xl_sgl_distr_dset.attrs['bin_edges'] = bin_edges
+
+
 def analyze_avg_xlink_distr(h5_data):
     """!TODO: Docstring for analyze_average_xlink_distr.
 
@@ -105,7 +138,8 @@ def analyze_xlink_force(h5_data):
     xl_si = xl_dbl_dset[:, 0]
     xl_sj = xl_dbl_dset[:, 1]
     force_arr = np.zeros((len(u_i), 3))
-    for i in range(len(u_i)):
+    nsteps = len(u_i)
+    for i in range(nsteps):
         for xl in range(len(xl_si[i])):
             force_arr[i, :] += xl_zrl_force(r_i[i], r_j[i],
                                             u_i[i], u_j[i],
