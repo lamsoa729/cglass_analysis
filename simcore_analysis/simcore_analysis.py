@@ -7,42 +7,68 @@ Email: adam.lamson@colorado.edu
 Description:
 """
 
+import argparse
+from pathlib import Path
 import sys
 import h5py
 import yaml
-import numpy as np
+
 from .sc_parse_data import collect_data
-from .sc_analyze_data import (analyze_xlink_moments, analyze_avg_xlink_distr,
-                              analyze_xlink_force, analyze_singly_bound_xlinks)
+from .sc_analyze_data import (analyze_seed)
+from .sc_seed_scan import analyze_seed_scan_data, collect_seed_h5_files
 
 
-def run_analysis(h5_data):
-    if 'analysis' in h5_data:
-        del h5_data['analysis']  # Start clean
-    analysis_grp = h5_data.create_group('analysis')
-    # analyze xlinks
-    analyze_singly_bound_xlinks(h5_data)
-    analyze_avg_xlink_distr(h5_data)
-    analyze_xlink_moments(h5_data)
-    analyze_xlink_force(h5_data)
-    # analyze filaments (maybe)
+def parse_args():
+    parser = argparse.ArgumentParser(prog='simcore_analysis.py',
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("input", default=None,
+                        help="Input for Simcore Analysis functions.")
+    parser.add_argument("-s", "--seed", action="store_true", default=False,
+                        help=("Run a single seed analysis. "
+                              "Input is a parameter file name."))
+    parser.add_argument("-S", "--seed_scan", action="store_true", default=False,
+                        help=("Collect hdf5 data files from a directory tree "
+                              "and create a file based on statistics of seed runs. "
+                              "Input is the directory that holds seed directories."))
+    opts = parser.parse_args()
+    return opts
 
 
-def main(param_file=None):
-    """!TODO: Docstring for main.
+def run_seed_scan_analysis(param_dir_path):
+    """!TODO: Docstring for prep_seed_scan_analysis.
 
-    Parameters
-    ----------
-    param_file: Yaml Parameter file
-
-    Returns
-    -------
-    TODO
+    @param param_dir_path: TODO
+    @return: TODO
 
     """
     try:
-        if param_file is None:
-            param_file = sys.argv[1]
+        if not isinstance(param_dir_path, Path):
+            param_dir_path = Path(param_dir_path)
+        # Get name of param_dir to make file name later
+        name = param_dir_path.parent[0]
+        h5_out = h5py.File(param_dir_path + '{}.h5'.format(name))
+
+        # Collect seeds to analyze
+        h5_data_lst = collect_seed_h5_files(param_dir_path)
+        # analyze seeds
+        analyze_seed_scan_data(h5_out, h5_data_lst)
+    except BaseException:
+        print("Analysis failed")
+        raise
+    finally:
+        h5_out.close()
+        for h5d in h5_data_lst:
+            h5d.close()
+
+
+def run_seed_analysis(param_file=None):
+    """!TODO: Docstring for prep_seed_analysis.
+
+    @param param_file: TODO
+    @return: TODO
+
+    """
+    try:
         with open(param_file, 'r') as pf:
             p_dict = yaml.safe_load(pf)
         print(p_dict)
@@ -54,12 +80,31 @@ def main(param_file=None):
                      run_name + '_params.yaml',
                      run_name + '_crosslink_' + xl_name + '.spec',
                      run_name + '_rigid_filament_' + fil_name + '.posit')
-        run_analysis(h5_data)
+        analyze_seed(h5_data)
     except BaseException:
         print("Analysis failed")
         raise
     finally:
         h5_data.close()
+
+
+def main():
+    """!Main function for simcore_analysis
+
+    Parameters
+    ----------
+    param_file: Yaml Parameter file
+
+    Returns
+    -------
+    TODO
+
+    """
+    opts = parse_args()
+    if opts.seed:
+        run_seed_analysis(opts.command)
+    elif opts.seed_scan:
+        run_seed_scan_analysis(opts.comman)
 
 
 ##########################################

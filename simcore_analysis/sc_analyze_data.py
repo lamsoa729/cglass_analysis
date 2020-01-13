@@ -35,6 +35,18 @@ def xl_zrl_force(r_i, r_j, u_i, u_j, s_i, s_j, ks):
     return -ks * (r_j + (u_j * s_j) - r_i - (u_i * s_i))
 
 
+def analyze_seed(h5_data):
+    if 'analysis' in h5_data:
+        del h5_data['analysis']  # Start clean
+    analysis_grp = h5_data.create_group('analysis')
+    # analyze xlinks
+    analyze_singly_bound_xlinks(h5_data)
+    analyze_avg_xlink_distr(h5_data)
+    analyze_xlink_moments(h5_data)
+    analyze_xlink_force(h5_data)
+    # analyze filaments (maybe)
+
+
 def analyze_xlink_moments(h5_data):
     anal_grp = h5_data['analysis']
     dbl_xlink_dset = h5_data['xl_data/doubly_bound']

@@ -15,24 +15,28 @@ import h5py
 def collect_seed_h5_files(dir_path):
     """ Spider through directory structure to collect and put h5 files in a list"""
     h5_data_lst = sorted([h5py.File(hf,
-                                    'r+') for hf in dir_path.glob('**/*.h5')],
+                                    'r+') for hf in dir_path.glob('*/*.h5')],
                          key=lambda x: x.attrs['seed'])
     return h5_data_lst
 
 
-def create_seed_scan_h5_file(param_dir_path):
-    """!TODO: Docstring for create_seed_scan_h5_file.
+# def run_seed_scan_analysis(param_dir_path):
+#     """!TODO: Docstring for create_seed_scan_h5_file.
 
-    @param param_dir_path: TODO
-    @return: TODO
+#     @param param_dir_path: TODO
+#     @return: TODO
 
-    """
-    # Get name of param_dir to make file name later
-    # Collect seeds to analyze
-    h5_data_lst = collect_seed_h5_files(param_dir_path)
-    # analyze seeds
+#     """
+#     if not isinstance(param_dir_path, Path):
+#         param_dir_path = Path(param_dir_path)
+#     # Get name of param_dir to make file name later
+#     name = param_dir_path.parent[0]
+#     h5_out = h5py.File(param_dir_path + '{}.h5'.format(name))
 
-    pass
+#     # Collect seeds to analyze
+#     h5_data_lst = collect_seed_h5_files(param_dir_path)
+#     # analyze seeds
+#     analyze_seed_scan_data(h5_out, h5_data_lst)
 
 
 def analyze_seed_scan_data(h5_out, h5_data_lst):
@@ -52,13 +56,18 @@ def analyze_seed_scan_data(h5_out, h5_data_lst):
     for key, val in h5_data_lst[0]['xl_data'].attrs.items():
         xl_grp.attrs[key] = val
     h5_out.create_dataset('time', data=h5_data_lst[0]['xl_data/time'][...])
-    # Analyze crosslink parameters
+
+    # Analyze crosslink values
     analyze_avg_moments(xl_grp, h5_data_lst)
     analyze_avg_dbl_distr(xl_grp, h5_data_lst)
     analyze_avg_sgl_num(xl_grp, h5_data_lst)
     analyze_avg_sgl_distr(xl_grp, h5_data_lst)
 
     # analyze forces and torques
+    analyze_avg_forces(h5_out, h5_data_lst)
+
+    # Analyze filament positions
+    # TODO: Analyze filament positions <13-01-20, ARL> #
 
 
 def analyze_avg_moments(xl_grp, h5_data_lst):

@@ -9,11 +9,8 @@ Description:
 
 import numpy as np
 import yaml
-import sys
 import h5py
 from pathlib import Path
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 
 HEADER_DT = np.dtype([('n_steps', np.int32),
                       ('n_posit', np.int32),
@@ -43,6 +40,22 @@ FIL_DT = np.dtype([('pos', np.double, 3),
                    ('length', np.double),
                    ('mesh_id', np.int32),
                    ])
+
+
+def collect_data(h5_data, param_file_name,
+                 xlink_file_name, filament_file_name):
+    """!TODO: Docstring for collect_data.
+
+    @param h5_data: TODO
+    @param param_file_name: TODO
+    @param xlink_file_name: TODO
+    @param filament_file_name: TODO
+    @return: TODO
+
+    """
+    init_data_file(h5_data, param_file_name)
+    get_xlink_data(h5_data, xlink_file_name)
+    get_filament_data(h5_data, filament_file_name)
 
 
 def parse_xlink_frame(xlink_data):
@@ -163,23 +176,6 @@ def get_filament_data(h5_data, fil_posit_fname):
             for fil in fils:
                 fil_pos_dset[i, :, fil['mesh_id'] - 1] = fil['pos']
                 fil_orient_dset[i, :, fil['mesh_id'] - 1] = fil['orient']
-
-
-def collect_data(h5_data, param_file_name,
-                 xlink_file_name, filament_file_name):
-    """!TODO: Docstring for collect_data.
-
-    @param h5_data: TODO
-    @param param_file_name: TODO
-    @param xlink_file_name: TODO
-    @param filament_file_name: TODO
-    @return: TODO
-
-    """
-    pass
-    init_data_file(h5_data, param_file_name)
-    get_xlink_data(h5_data, xlink_file_name)
-    get_filament_data(h5_data, filament_file_name)
 
 
 ##########################################
