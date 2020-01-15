@@ -14,8 +14,8 @@ import h5py
 import yaml
 
 from .sc_parse_data import collect_data
-from .sc_analyze_data import (analyze_seed)
-from .sc_seed_scan import analyze_seed_scan_data, collect_seed_h5_files
+from .sc_analyze_seed import (analyze_seed)
+from .sc_analyze_seed_scan import analyze_seed_scan, collect_seed_h5_files
 
 
 def parse_args():
@@ -30,6 +30,9 @@ def parse_args():
                         help=("Collect hdf5 data files from a directory tree "
                               "and create a file based on statistics of seed runs. "
                               "Input is the directory that holds seed directories."))
+    parser.add_argument("-R", "--run", action="store_true", default=False,
+                        help=("Create hdf5 files for both seed and parameter "
+                              "scans. All seeds must be analyzed first."))
     opts = parser.parse_args()
     return opts
 
@@ -45,13 +48,16 @@ def run_seed_scan_analysis(param_dir_path):
         if not isinstance(param_dir_path, Path):
             param_dir_path = Path(param_dir_path)
         # Get name of param_dir to make file name later
-        name = param_dir_path.parent[0]
-        h5_out = h5py.File(param_dir_path + '{}.h5'.format(name))
+        name = param_dir_path.stem
+        file_path = param_dir_path / '{}.h5'.format(name)
+        print(file_path)
+        h5_out = h5py.File(file_path, 'w')
 
         # Collect seeds to analyze
         h5_data_lst = collect_seed_h5_files(param_dir_path)
         # analyze seeds
-        analyze_seed_scan_data(h5_out, h5_data_lst)
+        analyze_seed_scan(h5_out, h5_data_lst)
+
     except BaseException:
         print("Analysis failed")
         raise
@@ -59,6 +65,33 @@ def run_seed_scan_analysis(param_dir_path):
         h5_out.close()
         for h5d in h5_data_lst:
             h5d.close()
+
+
+def run_full_tree_analysis(sim_dir_path, param):
+    """!Run analysis to collect seed data files and combine into seed scan files
+    and full run data files.
+
+    @param sim_dir_path: path to simulation directory
+    @return: TODO
+
+    """
+    try:
+        if not isinstance(sim_dir_path, Path):
+            sim_dir_path = Path(sim_dir_path)
+
+        # TODO: Create seed scan data files <15-01-20, ARL> #
+        # TODO: Collect seed scan data files <15-01-20, ARL> #
+        # TODO: Run analyis on collected data files <15-01-20, ARL> #
+
+        name = sim_dir_path.stem
+        file_path = '{}.h5'.format(name)
+        h5_out = h5py.File(file_path, 'w')
+    except BaseException:
+        print("Analysis failed")
+        raise
+    finally:
+        h5_out.close()
+        pass
 
 
 def run_seed_analysis(param_file=None):
@@ -102,9 +135,11 @@ def main():
     """
     opts = parse_args()
     if opts.seed:
-        run_seed_analysis(opts.command)
+        run_seed_analysis(opts.input)
     elif opts.seed_scan:
-        run_seed_scan_analysis(opts.comman)
+        run_seed_scan_analysis(opts.input)
+    else:
+        raise IOError('No valid analysis type was given.')
 
 
 ##########################################
