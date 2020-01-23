@@ -14,9 +14,19 @@ import h5py
 
 def collect_seed_h5_files(dir_path):
     """ Spider through directory structure to collect and put h5 files in a list"""
-    h5_data_lst = sorted([h5py.File(hf,
-                                    'r+') for hf in dir_path.glob('[!.]*/*.h5')],
-                         key=lambda x: x.attrs['seed'])
+    h5_data_lst = []
+    for hf in dir_path.glob('[!.]*/*.h5'):
+        h5d = h5py.File(hf, 'r+')
+        h5_data_lst += [h5d]
+        if not 'seed' in h5d.attrs:
+            print("!!! {} does not have seed attribute.", hf)
+        else:
+            h5_data_lst += [h5d]
+    h5_data_lst = sorted(h5_data_lst, key=lambda x: x.attrs['seed'])
+
+    # h5_data_lst = sorted([h5py.File(hf,
+    # 'r+') for hf in dir_path.glob('[!.]*/*.h5')],
+    # key=lambda x: x.attrs['seed'])
     return h5_data_lst
 
 
@@ -33,9 +43,12 @@ def analyze_seed_scan(h5_out, h5_data_lst):
     h5_out.attrs['n_seeds'] = len(h5_data_lst)
     # Create crosslink data file
     xl_grp = h5_out.create_group('xl_data')
+    fil_grp = h5_out.create_group('filament_data')
     # Copy over params for crosslinkers
     for key, val in h5_data_lst[0]['xl_data'].attrs.items():
         xl_grp.attrs[key] = val
+    for key, val in h5_data_lst[0]['filament_data'].attrs.items():
+        fil_grp.attrs[key] = val
     h5_out.create_dataset('time', data=h5_data_lst[0]['xl_data/time'][...])
 
     # Analyze crosslink values
@@ -49,6 +62,7 @@ def analyze_seed_scan(h5_out, h5_data_lst):
 
     # Analyze filament positions
     # TODO: Analyze filament positions <13-01-20, ARL> #
+    analyze_avg_fil_dist(fil_grp, h5_data_lst)
 
 
 def analyze_avg_moments(xl_grp, h5_data_lst):
@@ -172,16 +186,50 @@ def analyze_avg_forces(h5_out, h5_data_lst):
     @return: TODO
 
     """
-    force_mag_arr = np.asarray(
-        [np.linalg.norm(h5d['analysis/xl_forces'][...], axis=1)
-            for h5d in h5_data_lst])
-    torque_mag_arr = np.asarray(
-        [np.linalg.norm(h5d['analysis/xl_torques'][...], axis=2)
-            for h5d in h5_data_lst])
-    h5_out.create_dataset('xl_forces_mean', data=force_mag_arr.mean(axis=0))
-    h5_out.create_dataset('xl_forces_std', data=force_mag_arr.std(axis=0))
-    h5_out.create_dataset('xl_torques_mean', data=torque_mag_arr.mean(axis=0))
-    h5_out.create_dataset('xl_torques_std', data=torque_mag_arr.std(axis=0))
+    force_arr = np.asarray(
+        [h5d['analysis/xl_forces'][...] for h5d in h5_data_lst])
+    torque_arr = np.asarray(
+        [h5d['analysis/xl_torques'][...] for h5d in h5_data_lst])
+    h5_out.create_dataset('xl_forces_mean', data=force_arr.mean(axis=0))
+    h5_out.create_dataset('xl_forces_std', data=force_arr.std(axis=0))
+    h5_out.create_dataset('xl_torques_mean', data=torque_arr.mean(axis=0))
+    h5_out.create_dataset('xl_torques_std', data=torque_arr.std(axis=0))
+
+
+def analyze_avg_fil_dist(fil_grp, h5_data_lst):
+    """!Analyze the separation vectors between filament centers.
+
+    @param fil_grp: TODO
+    @param h5_data_lst: TODO
+    @return: TODO
+
+    """
+    r_ij_arr = []
+    for h5d in h5_data_lst:
+        fil_pos_dset = h5d['filament_data/filament_position']
+        r_ij_arr += [fil_pos_dset[:, :, 1] - fil_pos_dset[:, :, 0]]
+
+    r_ij_arr = np.asarray(r_ij_arr)
+
+    fil_grp.create_dataset('fil_avg_sep_mean', data=r_ij_arr.mean(axis=0))
+    fil_grp.create_dataset('fil_avg_sep_std', data=r_ij_arr.std(axis=0))
+
+
+def analyze_avg_fil_ang(fil_grp, h5_data_lst):
+    """!Analyze the separation vectors between filament centers.
+
+    @param fil_grp: TODO
+    @param h5_data_lst: TODO
+    @return: TODO
+
+    """
+    uiuj_arr = []
+    for h5d in h5_data_lst:
+        fil_orient_dset = h5d['filament_data/filament_orientation']
+        uiuj_arr += [np.einsum('ij,ij->i' fil_orient_dset[:, :, 0],
+                               fil_orient_dset[:, :, 1])]
+    fil_grp.create_dataset('fil_avg_theta_mean', data=uiuj_arr.mean(axis=0))
+    fil_grp.create_dataset('fil_avg_theta_std', data=uiuj_arr.std(axis=0))
 
 
 ##########################################

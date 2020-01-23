@@ -23,7 +23,7 @@ def get_param_from_dict(h5_data, param, spec=None):
     if spec is None:
         return h5_data.attrs[param]
     else:
-        param_dict = yaml.safe_load(h5_data.attrs['param_dict'])
+        param_dict = yaml.safe_load(h5_data.attrs['param_file'])
         # A little cludgy because you only check the parameters of the first
         # in the list in a given species.
         return param_dict[spec][0][param]
@@ -33,7 +33,7 @@ def collect_param_h5_files(dir_path, param, spec=None):
     """ Spider through directory structure to collect and put h5 files in a list"""
     h5_data_lst = sorted([h5py.File(hf, 'r+')
                           for hf in dir_path.glob('*/*.h5')],
-                         lambda x: get_param_from_dict(x, param, spec))
+                         key=lambda x: get_param_from_dict(x, param, spec))
     return h5_data_lst
 
 

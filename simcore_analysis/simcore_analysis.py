@@ -9,7 +9,6 @@ Description:
 
 import argparse
 from pathlib import Path
-import sys
 import h5py
 import yaml
 
@@ -55,7 +54,7 @@ def run_seed_scan_analysis(param_dir_path):
         if not isinstance(param_dir_path, Path):
             param_dir_path = Path(param_dir_path)
         # Get name of param_dir to make file name later
-        name = param_dir_path.stem
+        name = param_dir_path.name
         file_path = param_dir_path / '{}.h5'.format(name)
         print(file_path)
         if file_path.exists():

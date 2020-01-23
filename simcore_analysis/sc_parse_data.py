@@ -95,7 +95,6 @@ def init_data_file(h5_data, param_file_name):
 def get_xlink_data(h5_data, xlink_spec_fname):
     # Get data from xlink file
     param_dict = yaml.safe_load(h5_data.attrs['param_file'])
-    h5_data.attrs['param_dict'] = yaml.dump(param_dict)
     half_length = param_dict['rigid_filament'][0]['length'] * .5
 
     with open(xlink_spec_fname, 'rb') as xlf:
