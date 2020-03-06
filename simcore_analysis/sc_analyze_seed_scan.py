@@ -226,7 +226,7 @@ def analyze_avg_fil_ang(fil_grp, h5_data_lst):
     uiuj_arr = []
     for h5d in h5_data_lst:
         fil_orient_dset = h5d['filament_data/filament_orientation']
-        uiuj_arr += [np.einsum('ij,ij->i' fil_orient_dset[:, :, 0],
+        uiuj_arr += [np.einsum('ij,ij->i', fil_orient_dset[:, :, 0],
                                fil_orient_dset[:, :, 1])]
     fil_grp.create_dataset('fil_avg_theta_mean', data=uiuj_arr.mean(axis=0))
     fil_grp.create_dataset('fil_avg_theta_std', data=uiuj_arr.std(axis=0))

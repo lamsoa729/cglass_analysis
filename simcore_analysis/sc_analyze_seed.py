@@ -35,15 +35,20 @@ def xl_zrl_force(r_i, r_j, u_i, u_j, s_i, s_j, ks):
     return -ks * (r_j + (u_j * s_j) - r_i - (u_i * s_i))
 
 
+def xl_zrl_stretch(r_i, r_j, u_i, u_j, s_i, s_j):
+    return np.linalg.norm(r_j + (u_j * s_j) - r_i - (u_i * s_i))
+
+
 def analyze_seed(h5_data):
     if 'analysis' in h5_data:
         del h5_data['analysis']  # Start clean
-    analysis_grp = h5_data.create_group('analysis')
+    h5_data.create_group('analysis')
     # analyze xlinks
     analyze_singly_bound_xlinks(h5_data)
     analyze_avg_xlink_distr(h5_data)
     analyze_xlink_moments(h5_data)
     analyze_xlink_force(h5_data)
+    analyze_xlink_stretch_distr(h5_data)
     # analyze filaments (maybe)
 
 
@@ -52,22 +57,19 @@ def analyze_xlink_moments(h5_data):
     dbl_xlink_dset = h5_data['xl_data/doubly_bound']
 
     dbl_num_arr = [xld_t.size for xld_t in dbl_xlink_dset[:, 0]]
-    xl_zeroth_mom_dset = anal_grp.create_dataset(
-        'xl_zeroth_moment', data=dbl_num_arr)
+    anal_grp.create_dataset('xl_zeroth_moment', data=dbl_num_arr)
 
     mu10_arr = [np.sum(xld_t) for xld_t in dbl_xlink_dset[:, 0]]
     mu01_arr = [np.sum(xld_t) for xld_t in dbl_xlink_dset[:, 1]]
     xl_first_mom_arr = np.vstack((mu10_arr, mu01_arr))
-    xl_first_mom_dset = anal_grp.create_dataset(
-        'xl_first_moments', data=xl_first_mom_arr.T)
+    anal_grp.create_dataset('xl_first_moments', data=xl_first_mom_arr.T)
 
     mu20_arr = [np.sum(np.power(xld_t, 2)) for xld_t in dbl_xlink_dset[:, 0]]
     mu02_arr = [np.sum(np.power(xld_t, 2)) for xld_t in dbl_xlink_dset[:, 1]]
     mu11_arr = [np.dot(xld_0, xld_1) for xld_0, xld_1 in
                 zip(dbl_xlink_dset[:, 0], dbl_xlink_dset[:, 1])]
     xl_second_mom_arr = np.vstack((mu11_arr, mu20_arr, mu02_arr))
-    xl_second_mom_dset = anal_grp.create_dataset(
-        'xl_second_moments', data=xl_second_mom_arr.T)
+    anal_grp.create_dataset('xl_second_moments', data=xl_second_mom_arr.T)
 
 
 def analyze_singly_bound_xlinks(h5_data):
@@ -84,8 +86,7 @@ def analyze_singly_bound_xlinks(h5_data):
     for i, xl_arr in enumerate(xl_sgl_dset):
         xl_sgl_num_arr[i, 0] = xl_arr[0].size
         xl_sgl_num_arr[i, 1] = xl_arr[1].size
-    xl_sgl_num_dset = anal_grp.create_dataset('singly_bound_number',
-                                              data=xl_sgl_num_arr)
+    anal_grp.create_dataset('singly_bound_number', data=xl_sgl_num_arr)
 
     half_l = h5_data['filament_data'].attrs['lengths'][0] * .5
     n_steps = h5_data.attrs['n_steps']
@@ -155,8 +156,7 @@ def analyze_xlink_force(h5_data):
     nframes = len(u_i)
     for i in range(nframes):
         for xl in range(len(xl_si[i])):
-            force = xl_zrl_force(r_i[i], r_j[i],
-                                 u_i[i], u_j[i],
+            force = xl_zrl_force(r_i[i], r_j[i], u_i[i], u_j[i],
                                  xl_si[i][xl], xl_sj[i][xl],
                                  ks)
             force_arr[i, :] += force
@@ -165,3 +165,39 @@ def analyze_xlink_force(h5_data):
 
     h5_data['analysis'].create_dataset('xl_forces', data=force_arr)
     h5_data['analysis'].create_dataset('xl_torques', data=torque_arr)
+
+
+def analyze_xlink_stretch_distr(h5_data):
+    """!TODO: Docstring for analyze_xlink_stretch_distr.
+
+    @param h5_data: TODO
+    @return: TODO
+
+    """
+
+    xl_dbl_dset = h5_data['xl_data/doubly_bound']
+
+    fil_pos_dset = h5_data['filament_data/filament_position']
+    fil_orient_dset = h5_data['filament_data/filament_orientation']
+    u_i = fil_orient_dset[:, :, 0]
+    u_j = fil_orient_dset[:, :, 1]
+    r_i = fil_pos_dset[:, :, 0]
+    r_j = fil_pos_dset[:, :, 1]
+    xl_si = xl_dbl_dset[:, 0]
+    xl_sj = xl_dbl_dset[:, 1]
+    nframes = len(u_i)
+    stretch_frame_list = [[]] * nframes
+    for i in range(nframes):
+        for xl in range(len(xl_si[i])):
+            stretch_frame_list[i] += [xl_zrl_stretch(r_i[i], r_j[i],
+                                                     u_i[i], u_j[i],
+                                                     xl_si[i][xl], xl_sj[i][xl]
+                                                     )]
+    max_h = np.amax(stretch_frame_list)
+    step = .004
+    fil_bins = np.arange(0, max_h + 2. * step, step)
+    stretch_list_hist = np.zeros((nframes, fil_bins))
+    for i, xl_list in enumerate(stretch_frame_list):
+        stretch_list_hist[i] = np.histogram(xl_list, fil_bins)[0]
+
+        #######
