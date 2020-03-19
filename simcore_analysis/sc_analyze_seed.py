@@ -48,7 +48,7 @@ def analyze_seed(h5_data):
     analyze_avg_xlink_distr(h5_data)
     analyze_xlink_moments(h5_data)
     analyze_xlink_force(h5_data)
-    # analyze_xlink_stretch_distr(h5_data)
+    analyze_xlink_stretch_distr(h5_data)
     # analyze filaments (maybe)
 
 
