@@ -48,7 +48,7 @@ def analyze_seed(h5_data):
     analyze_avg_xlink_distr(h5_data)
     analyze_xlink_moments(h5_data)
     analyze_xlink_force(h5_data)
-    analyze_xlink_stretch_distr(h5_data)
+    # analyze_xlink_stretch_distr(h5_data)
     # analyze filaments (maybe)
 
 
@@ -186,18 +186,27 @@ def analyze_xlink_stretch_distr(h5_data):
     xl_si = xl_dbl_dset[:, 0]
     xl_sj = xl_dbl_dset[:, 1]
     nframes = len(u_i)
-    stretch_frame_list = [[]] * nframes
+    print(nframes)
+    stretch_frame_list = []
+    max_h = 0
     for i in range(nframes):
-        for xl in range(len(xl_si[i])):
-            stretch_frame_list[i] += [xl_zrl_stretch(r_i[i], r_j[i],
-                                                     u_i[i], u_j[i],
-                                                     xl_si[i][xl], xl_sj[i][xl]
-                                                     )]
-    max_h = np.amax(stretch_frame_list)
+        stretch_frame_list += [[]]
+        for s_i, s_j in zip(xl_si[i], xl_sj[i]):
+            stretch = xl_zrl_stretch(r_i[i], r_j[i],
+                                     u_i[i], u_j[i],
+                                     s_i, s_j)
+            max_h = stretch if stretch > max_h else max_h
+            stretch_frame_list[-1] += [stretch]
+
     step = .004
     fil_bins = np.arange(0, max_h + 2. * step, step)
-    stretch_list_hist = np.zeros((nframes, fil_bins))
+    stretch_list_hist = np.zeros((nframes, len(fil_bins) - 1))
     for i, xl_list in enumerate(stretch_frame_list):
         stretch_list_hist[i] = np.histogram(xl_list, fil_bins)[0]
 
-        #######
+    stretch_dset = h5_data['analysis'].create_dataset('xl_stretch',
+                                                      data=stretch_list_hist)
+    stretch_dset.attrs['bin_edges'] = fil_bins
+
+
+#######
