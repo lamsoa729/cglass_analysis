@@ -59,9 +59,9 @@ def analyze_seed_scan(h5_out, h5_data_lst):
 
     # analyze forces and torques
     analyze_avg_forces(h5_out, h5_data_lst)
+    analyze_avg_work(h5_out, h5_data_lst)
 
     # Analyze filament positions
-    # TODO: Analyze filament positions <13-01-20, ARL> #
     analyze_avg_fil_dist(fil_grp, h5_data_lst)
 
 
@@ -196,6 +196,24 @@ def analyze_avg_forces(h5_out, h5_data_lst):
     h5_out.create_dataset('xl_torques_std', data=torque_arr.std(axis=0))
 
 
+def analyze_avg_work(h5_out, h5_data_lst):
+    """!TODO: Docstring for analyze_avg_moments.
+
+    @param h5_out: TODO
+    @param h5_data_lst: TODO
+    @return: TODO
+
+    """
+    lin_work_arr = np.asarray(
+        [h5d['analysis/xl_linear_work'][...] for h5d in h5_data_lst])
+    rot_work_arr = np.asarray(
+        [h5d['analysis/xl_rotational_work'][...] for h5d in h5_data_lst])
+    h5_out.create_dataset('xl_lin_work_mean', data=lin_work_arr.mean(axis=0))
+    h5_out.create_dataset('xl_lin_work_std', data=lin_work_arr.std(axis=0))
+    h5_out.create_dataset('xl_rot_work_mean', data=rot_work_arr.mean(axis=0))
+    h5_out.create_dataset('xl_rot_work_std', data=rot_work_arr.std(axis=0))
+
+
 def analyze_avg_fil_dist(fil_grp, h5_data_lst):
     """!Analyze the separation vectors between filament centers.
 
@@ -228,6 +246,7 @@ def analyze_avg_fil_ang(fil_grp, h5_data_lst):
         fil_orient_dset = h5d['filament_data/filament_orientation']
         uiuj_arr += [np.einsum('ij,ij->i', fil_orient_dset[:, :, 0],
                                fil_orient_dset[:, :, 1])]
+    uiuj_arr = np.asarray(uiuj_arr)
     fil_grp.create_dataset('fil_avg_theta_mean', data=uiuj_arr.mean(axis=0))
     fil_grp.create_dataset('fil_avg_theta_std', data=uiuj_arr.std(axis=0))
 
