@@ -9,6 +9,18 @@ Description:
 import numpy as np
 
 
+def normalize(vec):
+    """!TODO: Docstring for normalize.
+
+    @param vec: TODO
+    @return: TODO
+
+    """
+    norm = np.linalg.norm(vec, axis=-1)
+    return np.divide(vec, norm[:, None],
+                     out=np.zeros_like(vec), where=norm[:, None] != 0)
+
+
 def flatten_dset(dset):
     """!Flattens a time series of positions of crosslinker heads on filament
 
@@ -48,6 +60,7 @@ def analyze_seed(h5_data):
     analyze_avg_xlink_distr(h5_data)
     analyze_xlink_moments(h5_data)
     analyze_xlink_force(h5_data)
+    analyze_xlink_work(h5_data)
     analyze_xlink_stretch_distr(h5_data)
     # analyze filaments (maybe)
 
@@ -207,6 +220,71 @@ def analyze_xlink_stretch_distr(h5_data):
     stretch_dset = h5_data['analysis'].create_dataset('xl_stretch',
                                                       data=stretch_list_hist)
     stretch_dset.attrs['bin_edges'] = fil_bins
+
+
+def analyze_xlink_work(h5_data):
+    """!TODO: Docstring for analyze_xlink_work.
+
+    @param h5_data: TODO
+    @return: TODO
+
+    """
+    if 'analysis/xl_forces' not in h5_data:
+        analyze_xlink_force(h5_data)
+    fil_pos_dset = h5_data['filament_data/filament_position']
+    fil_orient_dset = h5_data['filament_data/filament_orientation']
+    u_i = fil_orient_dset[:, :, 0]
+    u_j = fil_orient_dset[:, :, 1]
+    r_i = fil_pos_dset[:, :, 0]
+    r_j = fil_pos_dset[:, :, 1]
+
+    # Linear work calculations
+    dr_i = np.zeros(r_i.shape)
+    dr_i[1:] = r_i[1:] - r_i[:-1]
+    f_i = -1. * h5_data['analysis/xl_forces'][...]
+    dwl_i = np.zeros(r_i.shape[0])
+    # Use trapezoid rule for numerical integration
+    dwl_i[1:] = .5 * (np.einsum('ij,ij->i', dr_i[1:], f_i[:-1]) +
+                      np.einsum('ij,ij->i', dr_i[1:], f_i[1:]))
+
+    dr_j = np.zeros(r_j.shape)
+    dr_j[1:] = r_j[1:] - r_j[:-1]
+    f_j = h5_data['analysis/xl_forces'][...]
+    dwl_j = np.zeros(r_j.shape[0])
+    # Use trapezoid rule for numerical integration
+    dwl_j[1:] = .5 * (np.einsum('ij,ij->i', dr_j[1:], f_j[:-1]) +
+                      np.einsum('ij,ij->i', dr_j[1:], f_j[1:]))
+
+    # Rotational work calculations
+    dtheta_i_vec = np.zeros(u_i.shape)
+    # Get the direction of small rotation
+    dtheta_i_vec[1:] = normalize(np.cross(u_i[:-1], u_i[1:]))
+    # Get amplitude of small rotation
+    dtheta_i_vec[1:] *= np.arccos(np.einsum('ij,ij->i', u_i[1:], u_i[:-1])
+                                  )[:, None]
+    tau_i = h5_data['analysis/xl_torques'][:, 0, :]
+    dwr_i = np.zeros(u_i.shape[0])
+    # Use trapezoid rule for numerical integration
+    dwr_i[1:] = .5 * (np.einsum('ij,ij->i', dtheta_i_vec[1:], tau_i[:-1]) +
+                      np.einsum('ij,ij->i', dtheta_i_vec[1:], tau_i[1:]))
+
+    dtheta_j_vec = np.zeros(u_j.shape)
+    # Get the direction of small rotation
+    dtheta_j_vec[1:] = normalize(np.cross(u_j[:-1], u_j[1:]))
+    # Get amplitude of small rotation
+    dtheta_j_vec[1:] *= np.arccos(np.einsum('ij,ij->i', u_j[1:], u_j[:-1])
+                                  )[:, None]
+    tau_j = h5_data['analysis/xl_torques'][:, 1, :]
+    dwr_j = np.zeros(u_j.shape[0])
+    # Use trapezoid rule for numerical integration
+    dwr_j[1:] = .5 * (np.einsum('ij,ij->i', dtheta_j_vec[1:], tau_j[:-1]) +
+                      np.einsum('ij,ij->i', dtheta_j_vec[1:], tau_j[1:]))
+    xl_lin_work_dset = h5_data['analysis'].create_dataset(
+        'xl_linear_work', data=np.stack((dwl_i, dwl_j), axis=-1),
+        dtype=np.float32)
+    xl_rot_work_dset = h5_data['analysis'].create_dataset(
+        'xl_rotational_work', data=np.stack((dwr_i, dwr_j), axis=-1),
+        dtype=np.float32)
 
 
 #######
