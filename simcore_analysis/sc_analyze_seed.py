@@ -260,8 +260,8 @@ def analyze_xlink_work(h5_data):
     # Get the direction of small rotation
     dtheta_i_vec[1:] = normalize(np.cross(u_i[:-1], u_i[1:]))
     # Get amplitude of small rotation
-    dtheta_i_vec[1:] *= np.arccos(np.einsum('ij,ij->i', u_i[1:], u_i[:-1])
-                                  )[:, None]
+    dtheta_i_vec[1:] *= np.arccos(
+        np.clip(np.einsum('ij,ij->i', u_i[1:], u_i[:-1]), - 1., 1.))[:, None]
     tau_i = h5_data['analysis/xl_torques'][:, 0, :]
     dwr_i = np.zeros(u_i.shape[0])
     # Use trapezoid rule for numerical integration
@@ -272,8 +272,8 @@ def analyze_xlink_work(h5_data):
     # Get the direction of small rotation
     dtheta_j_vec[1:] = normalize(np.cross(u_j[:-1], u_j[1:]))
     # Get amplitude of small rotation
-    dtheta_j_vec[1:] *= np.arccos(np.einsum('ij,ij->i', u_j[1:], u_j[:-1])
-                                  )[:, None]
+    dtheta_j_vec[1:] *= np.arccos(
+        np.clip(np.einsum('ij,ij->i', u_j[1:], u_j[:-1]), -1., 1))[:, None]
     tau_j = h5_data['analysis/xl_torques'][:, 1, :]
     dwr_j = np.zeros(u_j.shape[0])
     # Use trapezoid rule for numerical integration
