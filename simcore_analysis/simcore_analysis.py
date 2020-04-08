@@ -52,16 +52,18 @@ def run_seed_scan_analysis(param_dir_path, analysis_type='analyze'):
     @return: TODO
 
     """
+    if not isinstance(param_dir_path, Path):
+        param_dir_path = Path(param_dir_path)
+    # Get name of param_dir to make file name later
+    name = param_dir_path.name
+    h5_file = param_dir_path / '{}.h5'.format(name)
+    print(h5_file)
+    if not h5_file.exists() and analysis_type == 'load':
+        print("!!! {} does not exist when trying to load !!!")
+    if h5_file.exists():  # always delete this file. Can only analyze if
+        h5_file.unlink()
     try:
-        if not isinstance(param_dir_path, Path):
-            param_dir_path = Path(param_dir_path)
-        # Get name of param_dir to make file name later
-        name = param_dir_path.name
-        file_path = param_dir_path / '{}.h5'.format(name)
-        print(file_path)
-        if file_path.exists():
-            file_path.unlink()
-        h5_out = h5py.File(file_path, 'r+')
+        h5_out = h5py.File(h5_file, 'r+')
         # Collect seeds to analyze
         h5_data_lst = collect_seed_h5_files(param_dir_path)
         # analyze seeds
@@ -123,7 +125,7 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
     h5_file = Path(run_name + '_data.h5')
 
     if not h5_file.exists() and analysis_type != 'load':
-        print("!!! {} does not exist when trying to load !!!")
+        print("!!! {} does not exist when trying to load !!!".format(h5_file))
         return
     if h5_file.exists() and analysis_type == 'overwrite':
         h5_file.unlink()

@@ -18,7 +18,7 @@ def collect_seed_h5_files(dir_path):
     for hf in dir_path.glob('[!.]*/*.h5'):
         h5d = h5py.File(hf, 'r+')
         h5_data_lst += [h5d]
-        if not 'seed' in h5d.attrs:
+        if 'seed' not in h5d.attrs:
             print("!!! {} does not have seed attribute.", hf)
         else:
             h5_data_lst += [h5d]
