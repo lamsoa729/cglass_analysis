@@ -24,6 +24,8 @@ def parse_args():
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("input", default=None,
                         help="Input for Simcore Analysis functions.")
+    parser.add_argument("-a ", "--analysis", type=str, default='analyze',
+                        help="")
     parser.add_argument("-s", "--seed", action="store_true", default=False,
                         help=("Run a single seed analysis. "
                               "Input is a parameter file name."))
@@ -43,7 +45,7 @@ def parse_args():
     return opts
 
 
-def run_seed_scan_analysis(param_dir_path):
+def run_seed_scan_analysis(param_dir_path, analysis_type='analyze'):
     """!TODO: Docstring for prep_seed_scan_analysis.
 
     @param param_dir_path: TODO
@@ -59,7 +61,7 @@ def run_seed_scan_analysis(param_dir_path):
         print(file_path)
         if file_path.exists():
             file_path.unlink()
-        h5_out = h5py.File(file_path, 'w')
+        h5_out = h5py.File(file_path, 'r+')
         # Collect seeds to analyze
         h5_data_lst = collect_seed_h5_files(param_dir_path)
         # analyze seeds
@@ -74,7 +76,7 @@ def run_seed_scan_analysis(param_dir_path):
             h5d.close()
 
 
-def run_full_tree_analysis(param, spec=None):
+def run_full_tree_analysis(param, spec=None, analysis_type='analyze'):
     """!Run analysis to collect seed data files and combine into seed scan files
     and full run data files.
 
@@ -107,25 +109,34 @@ def run_full_tree_analysis(param, spec=None):
             h5d.close()
 
 
-def run_seed_analysis(param_file=None):
+def run_seed_analysis(param_file=None, analysis_type='analyze'):
     """!TODO: Docstring for prep_seed_analysis.
 
     @param param_file: TODO
     @return: TODO
 
     """
+    with open(param_file, 'r') as pf:
+        p_dict = yaml.safe_load(pf)
+    print(p_dict)
+    run_name = p_dict['run_name']
+    h5_file = Path(run_name + '_data.h5')
+
+    if not h5_file.exists() and analysis_type != 'load':
+        print("!!! {} does not exist when trying to load !!!")
+        return
+    if h5_file.exists() and analysis_type == 'overwrite':
+        h5_file.unlink()
+
     try:
-        with open(param_file, 'r') as pf:
-            p_dict = yaml.safe_load(pf)
-        print(p_dict)
-        run_name = p_dict['run_name']
-        xl_name = p_dict['crosslink'][0]['name']
-        fil_name = p_dict['rigid_filament'][0]['name']
-        h5_data = h5py.File(run_name + '_data.h5', 'w')
-        collect_data(h5_data,
-                     run_name + '_params.yaml',
-                     run_name + '_crosslink_' + xl_name + '.spec',
-                     run_name + '_rigid_filament_' + fil_name + '.posit')
+        h5_data = h5py.File(run_name + '_data.h5', 'r+')
+        if 'xl_data' not in h5_data or 'filament_data' not in h5_data:
+            xl_name = p_dict['crosslink'][0]['name']
+            fil_name = p_dict['rigid_filament'][0]['name']
+            collect_data(h5_data,
+                         run_name + '_params.yaml',
+                         run_name + '_crosslink_' + xl_name + '.spec',
+                         run_name + '_rigid_filament_' + fil_name + '.posit')
         analyze_seed(h5_data)
     except BaseException:
         print("Analysis failed")
@@ -148,14 +159,14 @@ def main():
     """
     opts = parse_args()
     if opts.seed:
-        run_seed_analysis(opts.input)
+        run_seed_analysis(opts.input, opts.analysis)
     elif opts.seed_scan:
-        run_seed_scan_analysis(opts.input)
+        run_seed_scan_analysis(opts.input, opts.analysis)
     elif opts.run:
         if opts.spec != '':
-            run_full_tree_analysis(opts.input, opts.spec)
+            run_full_tree_analysis(opts.input, opts.spec, opts.analysis)
         else:
-            run_full_tree_analysis(opts.input)
+            run_full_tree_analysis(opts.input, analysis_type=opts.analysis)
 
     else:
         raise IOError('No valid analysis type was given.')
