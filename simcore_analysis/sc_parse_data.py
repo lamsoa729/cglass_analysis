@@ -10,7 +10,7 @@ Description:
 import numpy as np
 import yaml
 import h5py
-from pathlib import Path
+import re
 
 HEADER_DT = np.dtype([('n_steps', np.int32),
                       ('n_posit', np.int32),
@@ -176,6 +176,21 @@ def get_filament_data(h5_data, fil_posit_fname):
             for fil in fils:
                 fil_pos_dset[i, :, fil['mesh_id'] - 1] = fil['pos']
                 fil_orient_dset[i, :, fil['mesh_id'] - 1] = fil['orient']
+
+
+def get_cpu_time_from_log(log_file):
+    """!TODO: Docstring for get_cpu_time_from_log.
+    @return: TODO
+
+    """
+    if not log_file.exists():
+        raise OSError
+
+    pattern = re.compile(r'CPU Time: ([0-9]*\.[0-9]+)?$')
+    with open(log_file, 'r') as lf:
+        cpu_t = [re.findall(pattern, line)[0]
+                 for line in lf if re.findall(pattern, line)][0]
+    return float(cpu_t)
 
 
 ##########################################

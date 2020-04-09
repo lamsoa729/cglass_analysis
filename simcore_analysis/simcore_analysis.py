@@ -12,7 +12,7 @@ from pathlib import Path
 import h5py
 import yaml
 
-from .sc_parse_data import collect_data
+from .sc_parse_data import collect_data, get_cpu_time_from_log
 from .sc_analyze_seed import (analyze_seed)
 from .sc_analyze_seed_scan import analyze_seed_scan, collect_seed_h5_files
 from .sc_analyze_param_scan import collect_param_h5_files
@@ -25,7 +25,9 @@ def parse_args():
     parser.add_argument("input", default=None,
                         help="Input for Simcore Analysis functions.")
     parser.add_argument("-a ", "--analysis", type=str, default='analyze',
-                        help="")
+                        help=" Specify analysis type to determine if data will "
+                        "be overwritten. Options include "
+                        "(overwrite, analyze(default), or load.")
     parser.add_argument("-s", "--seed", action="store_true", default=False,
                         help=("Run a single seed analysis. "
                               "Input is a parameter file name."))
@@ -120,28 +122,40 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
     """
     with open(param_file, 'r') as pf:
         p_dict = yaml.safe_load(pf)
-    print(p_dict)
     run_name = p_dict['run_name']
     h5_file = Path(run_name + '_data.h5')
 
     if not h5_file.exists() and analysis_type != 'load':
-        print("!!! {} does not exist when trying to load !!!".format(h5_file))
+        print("ANALYSIS: !!! {} does not exist when trying to load !!!".format(
+            h5_file))
         return
     if h5_file.exists() and analysis_type == 'overwrite':
+        print("ANALYSIS: Overwriting current h5 data")
         h5_file.unlink()
 
     try:
         h5_data = h5py.File(run_name + '_data.h5', 'r+')
-        if 'xl_data' not in h5_data or 'filament_data' not in h5_data:
+        if analysis_type != 'load' and ('xl_data' not in h5_data
+                                        or 'filament_data' not in h5_data):
+            print("ANALYSIS: Collecting data")
             xl_name = p_dict['crosslink'][0]['name']
             fil_name = p_dict['rigid_filament'][0]['name']
             collect_data(h5_data,
                          run_name + '_params.yaml',
                          run_name + '_crosslink_' + xl_name + '.spec',
                          run_name + '_rigid_filament_' + fil_name + '.posit')
+        print("ANALYSIS: Analyzing data")
         analyze_seed(h5_data)
+        # Get run time statistics if they exist
+        time_anal_flag = p_dict.get('time_analysis', False)
+        if time_anal_flag:
+            try:
+                cpu_time = get_cpu_time_from_log(Path(run_name + '.log'))
+                h5_data['analysis'].attrs['cpu_time'] = cpu_time
+            except BaseException:
+                print("ANALYSIS: !!! Could not collect time analysis !!!")
     except BaseException:
-        print("Analysis failed")
+        print("ANALYSIS: failed")
         raise
     finally:
         h5_data.close()

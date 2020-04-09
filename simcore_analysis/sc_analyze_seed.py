@@ -7,6 +7,7 @@ Email: adam.lamson@colorado.edu
 Description:
 """
 import numpy as np
+from pathlib import Path
 
 
 def normalize(vec):

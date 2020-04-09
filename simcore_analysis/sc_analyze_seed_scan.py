@@ -17,7 +17,6 @@ def collect_seed_h5_files(dir_path):
     h5_data_lst = []
     for hf in dir_path.glob('[!.]*/*.h5'):
         h5d = h5py.File(hf, 'r+')
-        h5_data_lst += [h5d]
         if 'seed' not in h5d.attrs:
             print("!!! {} does not have seed attribute.", hf)
         else:
@@ -64,6 +63,9 @@ def analyze_seed_scan(h5_out, h5_data_lst):
     # Analyze filament positions
     analyze_avg_fil_dist(fil_grp, h5_data_lst)
     analyze_avg_fil_ang(fil_grp, h5_data_lst)
+
+    # Analyze cpu times
+    analyze_avg_cpu_time(h5_out, h5_data_lst)
 
 
 def analyze_avg_moments(xl_grp, h5_data_lst):
@@ -254,6 +256,30 @@ def analyze_avg_fil_ang(fil_grp, h5_data_lst):
     fil_grp.create_dataset('fil_avg_theta_std', data=theta_arr.std(axis=0))
 
 
+def analyze_avg_cpu_time(h5_out, h5_data_lst):
+    """!Collect cpu time of runs and create an area as wells as mean value and
+    standard deviation
+
+    @param h5_out: TODO
+    @param h5_data_lst: TODO
+    @return: TODO
+
+    """
+    cpu_time_arr = []
+    pass
+
 ##########################################
+
+
+def function(arg1):
+    """!TODO: Docstring for function.
+
+    @param arg1: TODO
+    @return: TODO
+
+    """
+    pass
+
+
 if __name__ == "__main__":
     print("Not implemented yet")
