@@ -125,7 +125,7 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
     run_name = p_dict['run_name']
     h5_file = Path(run_name + '_data.h5')
 
-    if not h5_file.exists() and analysis_type != 'load':
+    if not h5_file.exists() and analysis_type == 'load':
         print("ANALYSIS: !!! {} does not exist when trying to load !!!".format(
             h5_file))
         return
@@ -134,7 +134,7 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
         h5_file.unlink()
 
     try:
-        h5_data = h5py.File(run_name + '_data.h5', 'r+')
+        h5_data = h5py.File(h5_file, 'r+')
         if analysis_type != 'load' and ('xl_data' not in h5_data
                                         or 'filament_data' not in h5_data):
             print("ANALYSIS: Collecting data")
