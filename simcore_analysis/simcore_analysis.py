@@ -47,39 +47,6 @@ def parse_args():
     return opts
 
 
-def run_seed_scan_analysis(param_dir_path, analysis_type='analyze'):
-    """!TODO: Docstring for prep_seed_scan_analysis.
-
-    @param param_dir_path: TODO
-    @return: TODO
-
-    """
-    if not isinstance(param_dir_path, Path):
-        param_dir_path = Path(param_dir_path)
-    # Get name of param_dir to make file name later
-    name = param_dir_path.name
-    h5_file = param_dir_path / '{}.h5'.format(name)
-    print(h5_file)
-    if not h5_file.exists() and analysis_type == 'load':
-        print("!!! {} does not exist when trying to load !!!")
-    if h5_file.exists():  # always delete this file. Can only analyze if
-        h5_file.unlink()
-    try:
-        h5_out = h5py.File(h5_file, 'r+')
-        # Collect seeds to analyze
-        h5_data_lst = collect_seed_h5_files(param_dir_path)
-        # analyze seeds
-        analyze_seed_scan(h5_out, h5_data_lst)
-
-    except BaseException:
-        print("Analysis failed")
-        raise
-    finally:
-        h5_out.close()
-        for h5d in h5_data_lst:
-            h5d.close()
-
-
 def run_full_tree_analysis(param, spec=None, analysis_type='analyze'):
     """!Run analysis to collect seed data files and combine into seed scan files
     and full run data files.
@@ -113,6 +80,39 @@ def run_full_tree_analysis(param, spec=None, analysis_type='analyze'):
             h5d.close()
 
 
+def run_seed_scan_analysis(param_dir_path, analysis_type='analyze'):
+    """!TODO: Docstring for prep_seed_scan_analysis.
+
+    @param param_dir_path: TODO
+    @return: TODO
+
+    """
+    if not isinstance(param_dir_path, Path):
+        param_dir_path = Path(param_dir_path)
+    # Get name of param_dir to make file name later
+    name = param_dir_path.name
+    h5_file = param_dir_path / '{}.h5'.format(name)
+    print(h5_file)
+    if not h5_file.exists() and analysis_type == 'load':
+        print("!!! {} does not exist when trying to load !!!")
+    if h5_file.exists():  # always delete this file. Can only analyze if
+        h5_file.unlink()
+    try:
+        h5_out = h5py.File(h5_file, 'r+')
+        # Collect seeds to analyze
+        h5_data_lst = collect_seed_h5_files(param_dir_path)
+        # analyze seeds
+        analyze_seed_scan(h5_out, h5_data_lst)
+
+    except BaseException:
+        print("Analysis failed")
+        raise
+    finally:
+        h5_out.close()
+        for h5d in h5_data_lst:
+            h5d.close()
+
+
 def run_seed_analysis(param_file=None, analysis_type='analyze'):
     """!TODO: Docstring for prep_seed_analysis.
 
@@ -134,7 +134,7 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
         h5_file.unlink()
 
     try:
-        h5_data = h5py.File(h5_file, 'r+')
+        h5_data = h5py.File(h5_file, 'a')
         if analysis_type != 'load' and ('xl_data' not in h5_data
                                         or 'filament_data' not in h5_data):
             print("ANALYSIS: Collecting data")
