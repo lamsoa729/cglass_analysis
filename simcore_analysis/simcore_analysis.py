@@ -11,12 +11,18 @@ import argparse
 from pathlib import Path
 import h5py
 import yaml
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 
 from .sc_parse_data import collect_data, get_cpu_time_from_log
 from .sc_analyze_seed import (analyze_seed)
 from .sc_analyze_seed_scan import analyze_seed_scan, collect_seed_h5_files
 from .sc_analyze_param_scan import collect_param_h5_files
 from .sc_analyze_run import analyze_run
+from .sc_seed_data import SeedData
+from .sc_graphs import graph_2d_rod_diagram, sc_graph_all_data_2d
+from .sc_animation_funcs import make_sc_animation
 
 
 def parse_args():
@@ -43,6 +49,10 @@ def parse_args():
                         help=(" Specify if parameter used in param scan or "
                               "full run anlaysis is a specific species "
                               "parameter. e.g. 'crosslink' "))
+    parser.add_argument("-m", "--movie", action="store_true", default=False,
+                        help=("Create an animation from a seed."))
+    parser.add_argument("-g", "--graph", action="store_true", default=False,
+                        help=("Create graph of a seed's end state."))
     opts = parser.parse_args()
     return opts
 
@@ -98,7 +108,7 @@ def run_seed_scan_analysis(param_dir_path, analysis_type='analyze'):
     if h5_file.exists():  # always delete this file. Can only analyze if
         h5_file.unlink()
     try:
-        h5_out = h5py.File(h5_file, 'r+')
+        h5_out = h5py.File(h5_file, 'a')
         # Collect seeds to analyze
         h5_data_lst = collect_seed_h5_files(param_dir_path)
         # analyze seeds
@@ -161,6 +171,63 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
         h5_data.close()
 
 
+def make_animation(param_file):
+    """!TODO: Docstring for run_make_animation.
+    @return: TODO
+
+    """
+    # try:
+    writer = FFMpegWriter
+    sd_data = SeedData(param_file)
+    anim = make_sc_animation(sd_data)
+    # plt.show()
+    # except BaseException:
+    # print("ANALYSIS: movie failed")
+    # raise
+    # finally:
+    # sd_data.save()
+
+    print("You will make a movie someday.")
+
+
+def make_graph(param_file):
+    """!TODO: Docstring for run_make_animation.
+    @return: TODO
+
+    """
+    try:
+        sd_data = SeedData(param_file)
+        # fig, ax = plt.subplots()
+        graph_stl = {
+            "axes.titlesize": 18,
+            "axes.labelsize": 15,
+            "xtick.labelsize": 15,
+            "ytick.labelsize": 15,
+            "font.size": 15
+        }
+        with plt.style.context(graph_stl):
+            plt.style.use(graph_stl)
+            fig, axarr = plt.subplots(1, 2, figsize=(10, 4))
+            # gs = fig.add_gridspec(1, 2)
+            # axarr = np.asarray([fig.add_subplot(gs[0, 0]),
+            # fig.add_subplot(gs[0, 1]),
+            # ])
+            # fig.suptitle(' ')
+            # nframes = sd_data.time.size
+            # ax.set_aspect(1.)
+            sd_data.animate(50, fig, axarr)
+            # graph_2d_rod_diagram(0, fig, axarr, sd_data)
+            plt.show()
+
+    except BaseException:
+        print("ANALYSIS: graph failed")
+        raise
+    finally:
+        sd_data.save()
+
+    print("You will make a graph someday.")
+
+
 def main():
     """!Main function for simcore_analysis
 
@@ -175,7 +242,11 @@ def main():
     """
     opts = parse_args()
     if opts.seed:
-        run_seed_analysis(opts.input, opts.analysis)
+        # run_seed_analysis(opts.input, opts.analysis)
+        if opts.movie:
+            make_animation(opts.input)
+        if opts.graph:
+            make_graph(opts.input)
     elif opts.seed_scan:
         run_seed_scan_analysis(opts.input, opts.analysis)
     elif opts.run:
