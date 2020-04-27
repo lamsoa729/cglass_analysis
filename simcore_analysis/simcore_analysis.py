@@ -228,7 +228,7 @@ def main():
     """
     opts = parse_args()
     if opts.seed:
-        # run_seed_analysis(opts.input, opts.analysis)
+        run_seed_analysis(opts.input, opts.analysis)
         if opts.movie:
             make_animation(opts.input)
         if opts.graph:
