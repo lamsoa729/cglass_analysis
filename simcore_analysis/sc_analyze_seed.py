@@ -58,11 +58,12 @@ def analyze_seed(h5_data):
     h5_data.create_group('analysis')
     # analyze xlinks
     analyze_singly_bound_xlinks(h5_data)
-    analyze_avg_xlink_distr(h5_data)
     analyze_xlink_moments(h5_data)
     analyze_xlink_force(h5_data)
     analyze_xlink_work(h5_data)
     analyze_xlink_stretch_distr(h5_data)
+    # if h5_data['filament'].attrs.get('stationary_flag', False):
+    analyze_avg_xlink_distr(h5_data)
     # analyze filaments (maybe)
 
 

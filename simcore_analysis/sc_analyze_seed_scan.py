@@ -11,6 +11,9 @@ import numpy as np
 import yaml
 import h5py
 
+from .sc_helpers import find_start_time
+from .sc_analyze_seed import flatten_dset
+
 
 def collect_seed_h5_files(dir_path):
     """ Spider through directory structure to collect and put h5 files in a list"""
@@ -50,17 +53,17 @@ def analyze_seed_scan(h5_out, h5_data_lst):
         fil_grp.attrs[key] = val
     h5_out.create_dataset('time', data=h5_data_lst[0]['xl_data/time'][...])
 
-    # Analyze crosslink values
-    analyze_avg_moments(xl_grp, h5_data_lst)
-    analyze_avg_dbl_distr(xl_grp, h5_data_lst)
-    analyze_avg_sgl_num(xl_grp, h5_data_lst)
-    analyze_avg_sgl_distr(xl_grp, h5_data_lst)
-
     # analyze forces and torques
     analyze_avg_forces(h5_out, h5_data_lst)
     analyze_avg_work(h5_out, h5_data_lst)
 
-    # Analyze filament positions
+    # Analyze crosslink values
+    analyze_avg_moments(xl_grp, h5_data_lst)
+    analyze_avg_dbl_distr(h5_out, h5_data_lst)
+    analyze_avg_sgl_num(xl_grp, h5_data_lst)
+    analyze_avg_sgl_distr(xl_grp, h5_data_lst)
+
+    # Analyze filament values
     analyze_avg_fil_dist(fil_grp, h5_data_lst)
     analyze_avg_fil_ang(fil_grp, h5_data_lst)
 
@@ -114,7 +117,7 @@ def analyze_avg_moments(xl_grp, h5_data_lst):
         'second_moments_std', data=second_mom_std_arr.T)
 
 
-def analyze_avg_dbl_distr(xl_grp, h5_data_lst):
+def analyze_avg_sgl_distr(xl_grp, h5_data_lst):
     """!TODO: Docstring for analyze_avg_moments.
 
     @param h5_out: TODO
@@ -138,7 +141,7 @@ def analyze_avg_dbl_distr(xl_grp, h5_data_lst):
                           data=sgl_avg_distr_std)
 
 
-def analyze_avg_sgl_distr(xl_grp, h5_data_lst):
+def analyze_avg_dbl_distr(h5_out, h5_data_lst):
     """!TODO: Docstring for analyze_avg_moments.
 
     @param h5_out: TODO
@@ -146,6 +149,7 @@ def analyze_avg_sgl_distr(xl_grp, h5_data_lst):
     @return: TODO
 
     """
+    xl_grp = h5_out['xl_data']
     n_seeds = len(h5_data_lst)
     xl_grp.attrs['xedges'] = h5_data_lst[0]['analysis/average_doubly_bound_distr'].attrs['xedges']
     xl_grp.attrs['yedges'] = h5_data_lst[0]['analysis/average_doubly_bound_distr'].attrs['yedges']
@@ -157,6 +161,47 @@ def analyze_avg_sgl_distr(xl_grp, h5_data_lst):
                           data=xl_dbl_distr.mean(axis=0))
     xl_grp.create_dataset('average_doubly_bound_distr_std',
                           data=xl_dbl_distr.std(axis=0))
+
+    # Get steady state distr from all the runs if filaments are stationary
+    if h5_data_lst[0].attrs.get('stationary_flag', False):
+        # Get possible start times
+        analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst)
+
+
+def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
+    """!Analyze the average of the steady state doubly bound distribution
+
+    @param h5_out: TODO
+    @param h5_data_lst: TODO
+    @return: TODO
+
+    """
+    n_seeds = len(h5_data_lst)
+    xl_grp = h5_out['xl_data']
+    num_ind = find_start_time(xl_grp['zeroth_moment_mean'], 3)
+    force_ind = find_start_time(np.linalg.norm(
+        h5_out['xl_forces_mean'][...], axis=1), 3)
+    start_ind = max(num_ind, force_ind)
+    h5_out.attrs['steady_state_ind'] = start_ind
+    h5_out.attrs['steady_state_time'] = h5_out['time'][start_ind]
+
+    length = h5_data_lst[0]['filament_data'].attrs['lengths'][0]
+    fil_bins = np.linspace(-.5 * length, .5 * length, length * 25. / 8.)
+
+    fil0_lambdas = []
+    fil1_lambdas = []
+    for h5_data in h5_data_lst:
+        dbl_xlink_dset = h5_data['xl_data/doubly_bound']
+        fil0_lambdas += flatten_dset(dbl_xlink_dset[start_ind:, 0])
+        fil1_lambdas += flatten_dset(dbl_xlink_dset[start_ind:, 1])
+
+    dbl_2d_ss_distr, xedges, yedges = np.histogram2d(
+        np.asarray(fil0_lambdas), np.asarray(fil1_lambdas), fil_bins)
+    dbl_2d_ss_distr *= float(1. / (n_seeds * h5_out['time'].size))
+    xl_avg_distr_ss_dset = h5_out.create_dataset(
+        'average_steady_state_doubly_bound_distr', data=dbl_2d_ss_distr)
+    xl_avg_distr_ss_dset.attrs['xedges'] = xedges
+    xl_avg_distr_ss_dset.attrs['yedges'] = yedges
 
 
 def analyze_avg_sgl_num(xl_grp, h5_data_lst):
@@ -268,18 +313,5 @@ def analyze_avg_cpu_time(h5_out, h5_data_lst):
     cpu_time_arr = []
     pass
 
+
 ##########################################
-
-
-def function(arg1):
-    """!TODO: Docstring for function.
-
-    @param arg1: TODO
-    @return: TODO
-
-    """
-    pass
-
-
-if __name__ == "__main__":
-    print("Not implemented yet")
