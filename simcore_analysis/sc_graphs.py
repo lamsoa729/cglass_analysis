@@ -164,7 +164,7 @@ def graph_2d_rod_diagram(ax, sd_data, n=-1):
 
 
 def sc_graph_all_data_2d(n, fig, axarr, sc_data):
-    print("frame = ", n)
+    print("frame =", n)
     # Clean up if lines
     if not sc_data.init_flag:
         for ax in axarr.flatten():

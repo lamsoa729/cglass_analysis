@@ -180,12 +180,6 @@ def make_animation(param_file):
     writer = FFMpegWriter
     sd_data = SeedData(param_file)
     anim = make_sc_animation(sd_data)
-    # plt.show()
-    # except BaseException:
-    # print("ANALYSIS: movie failed")
-    # raise
-    # finally:
-    # sd_data.save()
 
     print("You will make a movie someday.")
 
@@ -197,7 +191,6 @@ def make_graph(param_file):
     """
     try:
         sd_data = SeedData(param_file)
-        # fig, ax = plt.subplots()
         graph_stl = {
             "axes.titlesize": 18,
             "axes.labelsize": 15,
@@ -208,14 +201,7 @@ def make_graph(param_file):
         with plt.style.context(graph_stl):
             plt.style.use(graph_stl)
             fig, axarr = plt.subplots(1, 2, figsize=(10, 4))
-            # gs = fig.add_gridspec(1, 2)
-            # axarr = np.asarray([fig.add_subplot(gs[0, 0]),
-            # fig.add_subplot(gs[0, 1]),
-            # ])
-            # fig.suptitle(' ')
-            # nframes = sd_data.time.size
-            # ax.set_aspect(1.)
-            sd_data.animate(50, fig, axarr)
+            sd_data.animate(-1, fig, axarr)
             # graph_2d_rod_diagram(0, fig, axarr, sd_data)
             plt.show()
 
