@@ -163,7 +163,7 @@ def analyze_avg_dbl_distr(h5_out, h5_data_lst):
                           data=xl_dbl_distr.std(axis=0))
 
     # Get steady state distr from all the runs if filaments are stationary
-    if h5_data_lst[0].attrs.get('stationary_flag', False):
+    if h5_data_lst[0]['filament_data'].attrs.get('stationary_flag', False):
         # Get possible start times
         analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst)
 
@@ -178,7 +178,7 @@ def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
     """
     n_seeds = len(h5_data_lst)
     xl_grp = h5_out['xl_data']
-    num_ind = find_start_time(xl_grp['zeroth_moment_mean'], 3)
+    num_ind = find_start_time(xl_grp['zeroth_moment_mean'][:], 3)
     force_ind = find_start_time(np.linalg.norm(
         h5_out['xl_forces_mean'][...], axis=1), 3)
     start_ind = max(num_ind, force_ind)
@@ -186,11 +186,12 @@ def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
     h5_out.attrs['steady_state_time'] = h5_out['time'][start_ind]
 
     length = h5_data_lst[0]['filament_data'].attrs['lengths'][0]
-    fil_bins = np.linspace(-.5 * length, .5 * length, length * 25. / 8.)
+    fil_bins = np.linspace(-.5 * length, .5 * length, length * 25. / 4)
 
     fil0_lambdas = []
     fil1_lambdas = []
-    dbl_2d_ss_distr_arr = np.zeros((n_seeds, fil_bins.size, fil_bins.size))
+    dbl_2d_ss_distr_arr = np.zeros(
+        (n_seeds, fil_bins.size - 1, fil_bins.size - 1))
     xedges, yedges = None, None
 
     for i, h5_data in enumerate(h5_data_lst):
@@ -208,7 +209,7 @@ def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
     xl_avg_distr_ss_mean_dset.attrs['yedges'] = yedges
 
     xl_avg_distr_ss_std_dset = h5_out.create_dataset(
-        'average_steady_state_doubly_bound_distr_mean',
+        'average_steady_state_doubly_bound_distr_std',
         data=dbl_2d_ss_distr_arr.std(axis=0))
     xl_avg_distr_ss_std_dset.attrs['xedges'] = xedges
     xl_avg_distr_ss_std_dset.attrs['yedges'] = yedges
