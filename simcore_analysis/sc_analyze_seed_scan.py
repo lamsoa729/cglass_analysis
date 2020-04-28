@@ -190,18 +190,28 @@ def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
 
     fil0_lambdas = []
     fil1_lambdas = []
-    for h5_data in h5_data_lst:
-        dbl_xlink_dset = h5_data['xl_data/doubly_bound']
-        fil0_lambdas += flatten_dset(dbl_xlink_dset[start_ind:, 0])
-        fil1_lambdas += flatten_dset(dbl_xlink_dset[start_ind:, 1])
+    dbl_2d_ss_distr_arr = np.zeros((n_seeds, fil_bins.size, fil_bins.size))
+    xedges, yedges = None, None
 
-    dbl_2d_ss_distr, xedges, yedges = np.histogram2d(
-        np.asarray(fil0_lambdas), np.asarray(fil1_lambdas), fil_bins)
-    dbl_2d_ss_distr *= float(1. / (n_seeds * h5_out['time'].size))
-    xl_avg_distr_ss_dset = h5_out.create_dataset(
-        'average_steady_state_doubly_bound_distr', data=dbl_2d_ss_distr)
-    xl_avg_distr_ss_dset.attrs['xedges'] = xedges
-    xl_avg_distr_ss_dset.attrs['yedges'] = yedges
+    for i, h5_data in enumerate(h5_data_lst):
+        dbl_xlink_dset = h5_data['xl_data/doubly_bound']
+        fil0_lambdas = flatten_dset(dbl_xlink_dset[start_ind:, 0])
+        fil1_lambdas = flatten_dset(dbl_xlink_dset[start_ind:, 1])
+        dbl_2d_ss_distr_arr[i], xedges, yedges = np.histogram2d(
+            np.asarray(fil0_lambdas), np.asarray(fil1_lambdas), fil_bins)
+        dbl_2d_ss_distr_arr[i] *= float(1. / h5_out['time'].size)
+
+    xl_avg_distr_ss_mean_dset = h5_out.create_dataset(
+        'average_steady_state_doubly_bound_distr_mean',
+        data=dbl_2d_ss_distr_arr.mean(axis=0))
+    xl_avg_distr_ss_mean_dset.attrs['xedges'] = xedges
+    xl_avg_distr_ss_mean_dset.attrs['yedges'] = yedges
+
+    xl_avg_distr_ss_std_dset = h5_out.create_dataset(
+        'average_steady_state_doubly_bound_distr_mean',
+        data=dbl_2d_ss_distr_arr.std(axis=0))
+    xl_avg_distr_ss_std_dset.attrs['xedges'] = xedges
+    xl_avg_distr_ss_std_dset.attrs['yedges'] = yedges
 
 
 def analyze_avg_sgl_num(xl_grp, h5_data_lst):
