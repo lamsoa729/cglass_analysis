@@ -11,8 +11,9 @@ import numpy as np
 import yaml
 import h5py
 
-from .sc_helpers import find_start_time
+from .sc_helpers import find_start_time, nm, make_pde_dict_from_sc_h5
 from .sc_analyze_seed import flatten_dset
+from .fp_steady_state import fp_steady_state_antipara
 
 
 def collect_seed_h5_files(dir_path):
@@ -66,6 +67,13 @@ def analyze_seed_scan(h5_out, h5_data_lst):
     # Analyze filament values
     analyze_avg_fil_dist(fil_grp, h5_data_lst)
     analyze_avg_fil_ang(fil_grp, h5_data_lst)
+
+    # Check if you can perform error analysis on code
+    if (fil_grp.attrs['stationary_flag'] and
+        (np.absolute(fil_grp['fil_avg_sep_mean'][-1, 2]) ==
+         np.linalg.norm(fil_grp['fil_avg_sep_mean'][-1, :]))
+            and fil_grp['fil_avg_theta_mean'][-1] == np.pi):
+        analyze_ss_distr_error(h5_out)
 
     # Analyze cpu times
     analyze_avg_cpu_time(h5_out, h5_data_lst)
@@ -150,7 +158,6 @@ def analyze_avg_dbl_distr(h5_out, h5_data_lst):
 
     """
     xl_grp = h5_out['xl_data']
-    n_seeds = len(h5_data_lst)
     xl_grp.attrs['xedges'] = h5_data_lst[0]['analysis/average_doubly_bound_distr'].attrs['xedges']
     xl_grp.attrs['yedges'] = h5_data_lst[0]['analysis/average_doubly_bound_distr'].attrs['yedges']
 
@@ -176,20 +183,19 @@ def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
     @return: TODO
 
     """
-    n_seeds = len(h5_data_lst)
+    # n_seeds = len(h5_data_lst)
+    n_seeds = h5_out.attrs['n_seeds']
     xl_grp = h5_out['xl_data']
-    num_ind = find_start_time(xl_grp['zeroth_moment_mean'][:], 3)
+    num_ind = find_start_time(xl_grp['zeroth_moment_mean'][:], 10)
     force_ind = find_start_time(np.linalg.norm(
-        h5_out['xl_forces_mean'][...], axis=1), 3)
-    start_ind = max(num_ind, force_ind)
+        h5_out['xl_forces_mean'][...], axis=1), 10)
+    start_ind = max(num_ind, force_ind) * 2
     h5_out.attrs['steady_state_ind'] = start_ind
     h5_out.attrs['steady_state_time'] = h5_out['time'][start_ind]
 
     length = h5_data_lst[0]['filament_data'].attrs['lengths'][0]
-    fil_bins = np.linspace(-.5 * length, .5 * length, length * 25. / 4)
+    fil_bins = np.linspace(-.5 * length, .5 * length, length * 25. / 4.)
 
-    fil0_lambdas = []
-    fil1_lambdas = []
     dbl_2d_ss_distr_arr = np.zeros(
         (n_seeds, fil_bins.size - 1, fil_bins.size - 1))
     xedges, yedges = None, None
@@ -200,7 +206,9 @@ def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
         fil1_lambdas = flatten_dset(dbl_xlink_dset[start_ind:, 1])
         dbl_2d_ss_distr_arr[i], xedges, yedges = np.histogram2d(
             np.asarray(fil0_lambdas), np.asarray(fil1_lambdas), fil_bins)
-        dbl_2d_ss_distr_arr[i] *= float(1. / h5_out['time'].size)
+        ds_i, ds_j = (xedges[1] - xedges[0], yedges[1] - yedges[0])
+        dbl_2d_ss_distr_arr[i] *= float(
+            1. / (dbl_xlink_dset[start_ind:, 0].size * ds_i * ds_j))
 
     xl_avg_distr_ss_mean_dset = h5_out.create_dataset(
         'average_steady_state_doubly_bound_distr_mean',
@@ -213,6 +221,43 @@ def analyze_avg_dbl_distr_steady_state(h5_out, h5_data_lst):
         data=dbl_2d_ss_distr_arr.std(axis=0))
     xl_avg_distr_ss_std_dset.attrs['xedges'] = xedges
     xl_avg_distr_ss_std_dset.attrs['yedges'] = yedges
+
+
+def analyze_ss_distr_error(h5_out):
+    """!Analyze the error of the mean distribution of doubly bound motors.
+    Does this in dimensional units.
+
+    @param h5_out: TODO
+    @return: TODO
+
+    """
+
+    n_seeds = h5_out.attrs['n_seeds']
+    ss_dbl_distr_mean = h5_out['average_steady_state_doubly_bound_distr_mean']
+    ss_dbl_distr_std = h5_out['average_steady_state_doubly_bound_distr_std']
+    s_i, s_j = (ss_dbl_distr_mean.attrs['xedges'] * nm,
+                ss_dbl_distr_mean.attrs['yedges'] * nm)
+    sol = ss_dbl_distr_mean[...] / (nm * nm)
+    sol_sem = ss_dbl_distr_std[...] / np.sqrt(n_seeds) / (nm * nm)
+    y = h5_out['filament_data/fil_avg_sep_mean'][-1, 2] * nm
+
+    p_dict = make_pde_dict_from_sc_h5(h5_out)
+    # print(p_dict)
+
+    ds_i = s_i[1] - s_i[0]
+    ds_j = s_j[1] - s_j[0]
+    S_i, S_j = np.meshgrid(s_i[:-1] + (ds_i * .5),
+                           s_j[:-1] + (ds_i * .5), indexing='ij')
+    sol_analytic = fp_steady_state_antipara(S_i, S_j, y, p_dict)
+
+    comp = np.absolute(sol - sol_analytic)
+    # print(ds_i)
+    # np.sum(sol) * ds_i * ds_j)
+    # print(np.sum(sol_sem) * ds_i * ds_j)
+    # print(np.sum(sol_analytic) * ds_i * ds_j)
+    # print(np.sum(comp) * ds_i * ds_j)
+    h5_out.attrs['error'] = np.sum(comp) * ds_i * ds_j
+    h5_out.attrs['sol_sem'] = np.sum(sol_sem) * ds_i * ds_j
 
 
 def analyze_avg_sgl_num(xl_grp, h5_data_lst):

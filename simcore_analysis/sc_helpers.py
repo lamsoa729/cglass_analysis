@@ -1,13 +1,41 @@
 #!/usr/bin/env python
 
 """@package docstring
-File: sc_helpders.py
+File: sc_helpers.py
 Author: Adam Lamson
 Email: adam.lamson@colorado.edu
 Description:
 """
 
 import numpy as np
+
+SQRT_PI = np.sqrt(np.pi)
+sec = .0358  # sec
+um = .025  # um
+pN = .1644  # pN
+nm = 25.  # nm
+nM = 106382.978723404  # nM for molecular simulations
+nM_fp = 1147.604948473  # nM for PDE and ME simulations
+
+
+def make_pde_dict_from_sc_h5(h5_data):
+    p_dict = {}
+    xl_grp = h5_data['xl_data']
+    fil_grp = h5_data['filament_data']
+    p_dict['L'] = fil_grp.attrs['length'] * nm
+    p_dict['ks'] = xl_grp.attrs['k_spring'] * pN / nm
+    p_dict['fs'] = xl_grp.attrs['f_stall'] * pN
+    p_dict['ko'] = 2. * xl_grp.attrs['k_off_d'] / sec
+    p_dict['co'] = xl_grp.attrs['concentration'] * nM / nM_fp
+    # (xl_grp.attrs['k_on_s'] * xl_grp.attrs['k_on_d'] *
+    #                xl_grp.attrs['bind_site_density']**2 *
+    #                xl_grp.attrs['concentration'] /
+    #                (xl_grp.attrs['k_off_s'] *
+    # xl_grp.attrs['k_off_d'])) * (nM / (nM_fp*nm*nm) #TODO might want to
+    # check this
+    p_dict['vo'] = xl_grp.attrs['velocity_d'] * nm / sec
+    p_dict['beta'] = 0.243309002
+    return p_dict
 
 
 def find_start_time(arr, reps=1):
