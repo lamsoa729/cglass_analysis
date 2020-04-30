@@ -71,8 +71,8 @@ def analyze_seed_scan(h5_out, h5_data_lst):
     # Check if you can perform error analysis on code
     if (fil_grp.attrs['stationary_flag'] and
         (np.absolute(fil_grp['fil_avg_sep_mean'][-1, 2]) ==
-         np.linalg.norm(fil_grp['fil_avg_sep_mean'][-1, :]))
-            and fil_grp['fil_avg_theta_mean'][-1] == np.pi):
+         np.linalg.norm(fil_grp['fil_avg_sep_mean'][-1, :])) and
+            np.isclose(np.absolute(fil_grp['fil_avg_theta_mean'][-1]), np.pi)):
         analyze_ss_distr_error(h5_out)
 
     # Analyze cpu times
@@ -231,6 +231,7 @@ def analyze_ss_distr_error(h5_out):
     @return: TODO
 
     """
+    print('Running error analysis')
 
     n_seeds = h5_out.attrs['n_seeds']
     ss_dbl_distr_mean = h5_out['average_steady_state_doubly_bound_distr_mean']
