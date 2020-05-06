@@ -177,11 +177,8 @@ def make_animation(param_file):
 
     """
     # try:
-    writer = FFMpegWriter
     sd_data = SeedData(param_file)
     anim = make_sc_animation(sd_data)
-
-    print("You will make a movie someday.")
 
 
 def make_graph(param_file):

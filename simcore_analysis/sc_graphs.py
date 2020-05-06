@@ -102,38 +102,65 @@ def draw_rod(ax, r_vec, u_vec, L, rod_diam, color='tab:green'):
                          color=color, clip_on=False, )
 
     tip = Circle((r_vec[1] + .5 * L * u_vec[1], r_vec[2] + .5 * L * u_vec[2]),
-                 .5 * rod_diam, color='r', zorder=3)
+                 .5 * rod_diam, color='b', zorder=3)
     ax.add_patch(tip)
     ax.add_line(line)
 
 
-def draw_xlink(ax, e_i, e_j, lw=10, color='k', alpha=.5):
+def draw_xlink(ax, e_i, e_j, lw=.5, color='r', alpha=1.0):
     line = LineDataUnits((e_i[1], e_j[1]), (e_i[2], e_j[2]),
                          linewidth=lw,  # solid_capstyle='round',
                          color=color, clip_on=False, alpha=alpha)
+    head_i = Circle((e_i[1], e_i[2]), lw, color='r', zorder=2)
+    head_j = Circle((e_j[1], e_j[2]), lw, color='r', zorder=2)
+
+    ax.add_patch(head_i)
+    ax.add_patch(head_j)
     ax.add_line(line)
+
+
+def draw_xlinks(ax, r_i, r_j, u_i, u_j, s_i_arr, s_j_arr):
+    """!TODO: Docstring for draw_xlinks.
+
+    @param r_i: TODO
+    @param r_j: TODO
+    @param u_i: TODO
+    @param u_j: TODO
+    @param e_i_arr: TODO
+    @param e_j_arrj: TODO
+    @return: TODO
+
+    """
+    for s_i, s_j in zip(s_i_arr, s_j_arr):
+        e_i = s_i * u_i + r_i
+        e_j = s_j * u_j + r_j
+        draw_xlink(ax, e_i, e_j)
 
 
 def graph_2d_rod_diagram(ax, sd_data, n=-1):
     """!TODO: Docstring for graph_2d_rod_diagram.
 
     @param ax: TODO
-    @param anal: TODO
+    @param sd_data: TODO
     @param n: TODO
     @return: TODO
 
     """
     # params = anal._params
     L_i, L_j = sd_data.h5_data['filament_data'].attrs['lengths']
-    # L_j = params["L2"]
     lw = 1.
     r_i_arr = sd_data.r_i_arr
     r_j_arr = sd_data.r_j_arr
     u_i_arr = sd_data.u_i_arr
     u_j_arr = sd_data.u_j_arr
 
+    xl_dbl_dset = sd_data.h5_data['xl_data/doubly_bound']
+
     draw_rod(ax, r_i_arr[n], u_i_arr[n], L_i, lw, color='tab:green')
     draw_rod(ax, r_j_arr[n], u_j_arr[n], L_j, lw, color='tab:purple')
+
+    draw_xlinks(ax, r_i_arr[n], r_j_arr[n], u_i_arr[n], u_j_arr[n],
+                xl_dbl_dset[n, 0], xl_dbl_dset[n, 1])
 
     # Get all extreme positions of tips in the first dimension to maintain
     # consistent graphing size
