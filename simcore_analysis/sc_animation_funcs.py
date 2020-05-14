@@ -20,13 +20,13 @@ def make_sc_animation(sd_data, writer='ffmpeg'):
     @return: TODO
 
     """
-    fig = plt.figure(constrained_layout=True, figsize=(10, 10))
+    fig = plt.figure(constrained_layout=True, figsize=(15, 15))
     graph_stl = {
         "axes.titlesize": 18,
         "axes.labelsize": 15,
         "xtick.labelsize": 15,
         "ytick.labelsize": 15,
-        "font.size": 15
+        "font.size": 15,
     }
     with plt.style.context(graph_stl):
         plt.style.use(graph_stl)

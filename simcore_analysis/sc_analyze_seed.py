@@ -221,7 +221,12 @@ def analyze_xlink_stretch_distr(h5_data):
 
     stretch_dset = h5_data['analysis'].create_dataset('xl_stretch',
                                                       data=stretch_list_hist)
-    stretch_dset.attrs['bin_edges'] = fil_bins
+    try:
+        stretch_dset.attrs['bin_edges'] = fil_bins
+    except BaseException:
+        pass
+
+    h5_data['analysis'].create_dataset('xl_stretch_bin_edges', data=fil_bins)
 
 
 def analyze_xlink_work(h5_data):

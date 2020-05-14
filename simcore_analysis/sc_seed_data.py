@@ -9,6 +9,7 @@ Description:
 from pathlib import Path
 import h5py
 import yaml
+import numpy as np
 from .sc_graphs import sc_graph_all_data_2d
 
 
@@ -44,6 +45,30 @@ class SeedData():
         self.r_j_arr = fil_grp['filament_position'][:, :, 1]
         self.u_i_arr = fil_grp['filament_orientation'][:, :, 0]
         self.u_j_arr = fil_grp['filament_orientation'][:, :, 1]
+
+        self.xl_dbl_distr_arr, self.fil_bins = self.analyze_xlink_distr()
+        self.xl_dbl_distr_max = np.amax(self.xl_dbl_distr_arr)
+
+    def analyze_xlink_distr(self, bin_num=120):
+
+        length = self.h5_data['filament_data'].attrs['lengths'][0]
+        fil_bins = np.linspace(-.5 * length, .5 * length, bin_num)
+
+        # print(fil_bins)
+        # Combine all time data to get an average density
+        dbl_xlink = self.h5_data['xl_data/doubly_bound'][...]
+        # print(dbl_xlink_dset.shape[0])
+        dbl_2D_distr = np.zeros((dbl_xlink.shape[0], bin_num - 1, bin_num - 1))
+        for n in range(dbl_xlink.shape[0]):
+            fil_i_lambdas = dbl_xlink[n, 0]
+            fil_j_lambdas = dbl_xlink[n, 1]
+            dbl_2D_distr[n], xedges, yedges = np.histogram2d(
+                fil_i_lambdas, fil_j_lambdas, fil_bins)
+        # print(dbl_2D_distr)
+        # ax.set_aspect('equal')
+        # cb = ax.pcolormesh(fil_bins, fil_bins,
+            # dbl_2D_distr.T)
+        return dbl_2D_distr, fil_bins
 
     def load(self):
         """!Load h5_data file

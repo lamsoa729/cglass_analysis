@@ -15,6 +15,9 @@ from matplotlib.patches import (Circle, RegularPolygon, FancyArrowPatch,
 
 from .sc_analyze_seed import flatten_dset
 
+nm = 25.
+um = .025
+
 
 # def flatten_dset(l): return [item for sublist in l for item in sublist]
 
@@ -111,15 +114,15 @@ def draw_xlink(ax, e_i, e_j, lw=.5, color='r', alpha=1.0):
     line = LineDataUnits((e_i[1], e_j[1]), (e_i[2], e_j[2]),
                          linewidth=lw,  # solid_capstyle='round',
                          color=color, clip_on=False, alpha=alpha)
-    head_i = Circle((e_i[1], e_i[2]), lw, color='r', zorder=2)
-    head_j = Circle((e_j[1], e_j[2]), lw, color='r', zorder=2)
+    head_i = Circle((e_i[1], e_i[2]), lw, color='r', zorder=3)
+    head_j = Circle((e_j[1], e_j[2]), lw, color='r', zorder=3)
 
     ax.add_patch(head_i)
     ax.add_patch(head_j)
     ax.add_line(line)
 
 
-def draw_xlinks(ax, r_i, r_j, u_i, u_j, s_i_arr, s_j_arr):
+def draw_xlinks(ax, r_i, r_j, u_i, u_j, s_i_arr, s_j_arr, lw):
     """!TODO: Docstring for draw_xlinks.
 
     @param r_i: TODO
@@ -134,7 +137,7 @@ def draw_xlinks(ax, r_i, r_j, u_i, u_j, s_i_arr, s_j_arr):
     for s_i, s_j in zip(s_i_arr, s_j_arr):
         e_i = s_i * u_i + r_i
         e_j = s_j * u_j + r_j
-        draw_xlink(ax, e_i, e_j)
+        draw_xlink(ax, e_i, e_j, lw)
 
 
 def graph_2d_rod_diagram(ax, sd_data, n=-1):
@@ -147,10 +150,10 @@ def graph_2d_rod_diagram(ax, sd_data, n=-1):
 
     """
     # params = anal._params
-    L_i, L_j = sd_data.h5_data['filament_data'].attrs['lengths']
-    lw = 1.
-    r_i_arr = sd_data.r_i_arr
-    r_j_arr = sd_data.r_j_arr
+    L_i, L_j = sd_data.h5_data['filament_data'].attrs['lengths'] * nm
+    lw = 1. * nm
+    r_i_arr = sd_data.r_i_arr * nm
+    r_j_arr = sd_data.r_j_arr * nm
     u_i_arr = sd_data.u_i_arr
     u_j_arr = sd_data.u_j_arr
 
@@ -158,9 +161,8 @@ def graph_2d_rod_diagram(ax, sd_data, n=-1):
 
     draw_rod(ax, r_i_arr[n], u_i_arr[n], L_i, lw, color='tab:green')
     draw_rod(ax, r_j_arr[n], u_j_arr[n], L_j, lw, color='tab:purple')
-
-    draw_xlinks(ax, r_i_arr[n], r_j_arr[n], u_i_arr[n], u_j_arr[n],
-                xl_dbl_dset[n, 0], xl_dbl_dset[n, 1])
+    # if anal.OT1_pos is not None or anal.OT2_pos is not None:
+    #     labels += ["Optical trap", "Bead"]
 
     # Get all extreme positions of tips in the first dimension to maintain
     # consistent graphing size
@@ -184,10 +186,11 @@ def graph_2d_rod_diagram(ax, sd_data, n=-1):
     ax.set_ylim(min_y, max_y)
     ax.set_xlabel(r'x (nm)')
     ax.set_ylabel(r'y (nm)')
+
     labels = ["fil$_i$", "fil$_j$", "Plus-end"]
-    # if anal.OT1_pos is not None or anal.OT2_pos is not None:
-    #     labels += ["Optical trap", "Bead"]
     ax.legend(labels, loc="upper right")
+    draw_xlinks(ax, r_i_arr[n], r_j_arr[n], u_i_arr[n], u_j_arr[n],
+                xl_dbl_dset[n, 0] * nm, xl_dbl_dset[n, 1] * nm, .4 * lw)
 
 
 def sc_graph_all_data_2d(n, fig, axarr, sc_data):
@@ -201,13 +204,32 @@ def sc_graph_all_data_2d(n, fig, axarr, sc_data):
             del artist
 
     graph_2d_rod_diagram(axarr[0], sc_data, n)
+    cb = graph_frame_xlink_distr(
+        axarr[1], sc_data, n, sc_data.xl_dbl_distr_max)
 
     if sc_data.init_flag:
         axarr[0].set_aspect(1.0)
         axarr[1].set_aspect(1.0)
+        fig.colorbar(cb, ax=axarr[1])
         sc_data.init_flag = False
 
     return fig.gca().lines + fig.gca().collections
+
+
+def graph_frame_xlink_distr(ax, sd_data, n=-1, max_val=1):
+    """!TODO: Docstring for graph_frame_xlink_distr.
+
+    @param sd_data: TODO
+    @return: TODO
+
+    """
+    cb = ax.pcolormesh(sd_data.fil_bins * nm, sd_data.fil_bins * nm,
+                       sd_data.xl_dbl_distr_arr[n].T, vmin=0, vmax=max_val)
+    ax.set_xlabel(
+        'Head distance from \n center of fil$_i$ $s_i$ (nm)')
+    ax.set_ylabel(
+        'Head distance from \n center of fil$_j$ $s_j$ (nm)')
+    return cb
 
 
 def graph_avg_xlink_distr(h5_data, fig, ax):
