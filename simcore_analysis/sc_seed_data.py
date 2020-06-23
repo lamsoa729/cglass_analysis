@@ -17,18 +17,18 @@ class SeedData():
 
     """!Docstring for SeedData. """
 
-    def __init__(self, param_file):
+    def __init__(self, param_file, sd_path=Path('./')):
         """!Initialize with parameter file
 
         @param param_file: parameter file for simcore seed
 
         """
 
-        self._param_file = param_file
-        with open(param_file, 'r') as pf:
+        self._param_file = sd_path / param_file
+        with open(self._param_file, 'r') as pf:
             self.p_dict = yaml.safe_load(pf)
         self.run_name = self.p_dict['run_name']
-        self._h5_file = Path(self.run_name + '_data.h5')
+        self._h5_file = sd_path / '{}_data.h5'.format(self.run_name)
         self.h5_data = self.load()
         self.parse_data()
         self.init_flag = True

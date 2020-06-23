@@ -22,7 +22,7 @@ from .sc_analyze_param_scan import collect_param_h5_files
 from .sc_analyze_run import analyze_run
 from .sc_seed_data import SeedData
 from .sc_graphs import graph_2d_rod_diagram, sc_graph_all_data_2d
-from .sc_animation_funcs import make_sc_animation
+from .sc_animation_funcs import make_sc_animation, make_sc_animation_min
 
 
 def parse_args():
@@ -178,7 +178,9 @@ def make_animation(param_file):
     """
     # try:
     sd_data = SeedData(param_file)
-    anim = make_sc_animation(sd_data)
+    Writer = FFMpegWriter
+    writer = Writer(fps=25, metadata=dict(artist='Me'), bitrate=1800)
+    anim = make_sc_animation_min(sd_data, writer)
 
 
 def make_graph(param_file):

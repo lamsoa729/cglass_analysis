@@ -17,6 +17,7 @@ from .sc_analyze_seed import flatten_dset
 
 nm = 25.
 um = .025
+sec = .0357
 
 
 # def flatten_dset(l): return [item for sublist in l for item in sublist]
@@ -187,8 +188,12 @@ def graph_2d_rod_diagram(ax, sd_data, n=-1):
     ax.set_xlabel(r'x (nm)')
     ax.set_ylabel(r'y (nm)')
 
-    labels = ["fil$_i$", "fil$_j$", "Plus-end"]
-    ax.legend(labels, loc="upper right")
+    # labels = ["fil$_i$", "fil$_j$", "Plus-end"]
+    ax.text(.05, .90, "Time = {:.2f} sec".format(sd_data.time[n] * sec),
+            horizontalalignment='left',
+            verticalalignment='bottom',
+            transform=ax.transAxes)
+    # ax.legend(labels, loc="upper right")
     draw_xlinks(ax, r_i_arr[n], r_j_arr[n], u_i_arr[n], u_j_arr[n],
                 xl_dbl_dset[n, 0] * nm, xl_dbl_dset[n, 1] * nm, .4 * lw)
 
