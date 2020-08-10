@@ -40,43 +40,57 @@ FIL_DT = np.dtype([('pos', np.double, 3),
                    ('length', np.double),
                    ('mesh_id', np.int32),
                    ])
+SITE_DT = np.dtype(['pos', np.double, 3])
+
+FLEX_FIL_DT = np.dtype([()])
+
+OTRAP_DT = np.dtype([('pos', np.double, 3),
+                     ('spos', np.double, 3),
+                     ('orient', np.double, 3),
+                     ('diameter', np.double),
+                     ('length', np.double),
+                     ('bpos', np.double, 3),
+                     ('bspos', np.double, 3),
+                     ('attach_id', np.int32)])
 
 
-def collect_data(h5_data, param_file_name,
-                 xlink_file_name, filament_file_name):
+def collect_data(h5_data, param_file_name):
     """!TODO: Docstring for collect_data.
 
     @param h5_data: TODO
     @param param_file_name: TODO
-    @param xlink_file_name: TODO
-    @param filament_file_name: TODO
-    @return: TODO
+    @return: void, updates h5_data with information
 
     """
     init_data_file(h5_data, param_file_name)
-    get_xlink_data(h5_data, xlink_file_name)
-    get_filament_data(h5_data, filament_file_name)
+    p_dict = yaml.safe_load(h5_data.attrs['param_file'])
+    run_name = p_dict['run_name']
 
-
-def parse_xlink_frame(xlink_data):
-    sb_list = [[], []]
-    db_list = [[], []]
-
-    for xl in xlink_data:
-        if xl['doubly']:
-            if xl['anchors'][0]['attached_id'] == xl['anchors'][1]['attached_id']:
-                print("WARNING: Anchors are attached to same filament.")
-            else:
-                for anch in xl['anchors']:
-                    if anch['attached_id'] < 0:
-                        print(
-                            "WARNING: Anchor not attached even though doubly bound.")
-                    else:
-                        db_list[anch['attached_id'] - 1] += [anch['lambda']]
-        elif xl['anchors'][0]['bound']:
-            sb_list[xl['anchors'][0]['attached_id'] -
-                    1] += [xl['anchors'][0]['lambda']]
-    return sb_list, db_list
+    if isinstance(p_dict['rigid_filament']):
+        for fil_p_dict in p_dict['rigid_filament']:
+            fil_name = fil_p_dict['name']
+            fil_file_name = run_name + '_rigid_filament_' + fil_name + '.posit'
+            print(fil_file_name)
+            get_rigid_filament_data(h5_data, fil_file_name, fil_p_dict)
+    if isinstance(p_dict['filament']):
+        for fil_p_dict in p_dict['filament']:
+            fil_name = fil_p_dict['name']
+            fil_file_name = run_name + '_filament_' + fil_name + '.spec'
+            print(fil_file_name)
+            print("WARNING: Flexible filament analysis not implemented yet.")
+    if isinstance(p_dict['crosslink']):
+        for xl_p_dict in p_dict['crosslink']:
+            xl_name = xl_p_dict['name']
+            xlink_file_name = run_name + '_crosslink_' + xl_name + '.spec'
+            print(xlink_file_name)
+            get_xlink_data(h5_data, xlink_file_name, p_dict, xl_p_dict)
+    if isinstance(p_dict['optical_trap']):
+        for ot_p_dict in p_dict['optical_trap']:
+            ot_name = ot_p_dict['name']
+            ot_file_name = run_name + '_optical_trap_' + ot_name + '.spec'
+            print(ot_file_name)
+            get_optical_trap_data(h5_data, ot_file_name, ot_p_dict)
+            # print("WARNING: Optical trap analysis not implemented yet.")
 
 
 def init_data_file(h5_data, param_file_name):
@@ -86,15 +100,10 @@ def init_data_file(h5_data, param_file_name):
         for key, val in param_dict.items():
             if not isinstance(val, list) and not isinstance(val, dict):
                 h5_data.attrs[key] = val
-    # xl_time_arr = h5_data.attrs['delta'] * np.arange(
-    #     h5_data.attrs['n_steps'],
-    #     param_dict['species']['n_spec'])
-    # h5_data.create_dataset('time', data=xl_time_arr)
 
 
-def get_xlink_data(h5_data, xlink_spec_fname):
+def get_xlink_data(h5_data, xlink_spec_fname, param_dict, xl_p_dict):
     # Get data from xlink file
-    param_dict = yaml.safe_load(h5_data.attrs['param_file'])
     half_length = param_dict['rigid_filament'][0]['length'] * .5
 
     with open(xlink_spec_fname, 'rb') as xlf:
@@ -105,7 +114,7 @@ def get_xlink_data(h5_data, xlink_spec_fname):
         xl_time_arr = np.arange(0, header[0], header[1]) * header[2]
         xl_grp.create_dataset('time', data=xl_time_arr)
 
-        for key, val in param_dict['crosslink'][0].items():
+        for key, val in xl_p_dict.items():
             xl_grp.attrs[key] = val
         # Create a variable length data type
         xl_type = h5py.special_dtype(vlen=np.dtype(np.double))
@@ -139,19 +148,23 @@ def get_xlink_data(h5_data, xlink_spec_fname):
         xl_dbl_dset[...] -= half_length
 
 
-def get_filament_data(h5_data, fil_posit_fname):
-    param_dict = yaml.safe_load(h5_data.attrs['param_file'])
+def get_rigid_filament_data(h5_data, fil_posit_fname, fil_p_dict):
 
     with open(fil_posit_fname, 'rb') as flf:
         header = np.fromfile(flf, HEADER_DT, count=1)[0]
-        fil_num = 2  # TODO: Hard coded for the moment
+        # fil_num = 2  # Hard coded for two filaments
+        data_start = flf.tell()
+        fil_num = np.fromfile(flf, np.int32, count=1)[0]
+        flf.seek(data_start)
         print(header)
-        nframes = int(header[0] / header[1])
+        nframes = int(header[0] / header[1])  # Get number of frames to read
+
+        # Setup of structures to store data
         fil_grp = h5_data.create_group('filament_data')
         fil_time_arr = np.arange(0, header[0], header[1]) * header[2]
         fil_grp.create_dataset('time', data=fil_time_arr)
 
-        for key, val in param_dict['rigid_filament'][0].items():
+        for key, val in fil_p_dict.items():
             fil_grp.attrs[key] = val
         # Create a data set that can store all the frames of the doubly bound
         # motors
@@ -178,6 +191,47 @@ def get_filament_data(h5_data, fil_posit_fname):
                 fil_orient_dset[i, :, fil['mesh_id'] - 1] = fil['orient']
 
 
+def get_optical_trap_data(h5_data, ot_spec_fname, ot_p_dict):
+    """!Get data from optical trap spec files
+
+    @param h5_data: TODO
+    @param ot_spec_fname: TODO
+    @param ot_p_dict: TODO
+    @return: TODO
+
+    """
+    with open(ot_spec_fname, 'rb') as otf:
+        header = np.fromfile(otf, HEADER_DT, count=1)[0]
+        data_start = otf.tell()
+        ot_num = np.fromfile(otf, np.int32, count=1)[0]
+        otf.seek(data_start)
+        # ot_num = 2  # TODO: Hard coded for the moment
+        print(header)
+        nframes = int(header[0] / header[1])  # Get number of frames to read
+        ot_grp = h5_data.create_group('optical_trap_data')
+        ot_time_arr = np.arange(0, header[0], header[1]) * header[2]
+        ot_grp.create_dataset('time', data=ot_time_arr)
+
+        for key, val in ot_p_dict.items():
+            ot_grp.attrs[key] = val
+
+        ot_pos_dset = ot_grp.create_dataset(
+            'optical_trap_position', (nframes, 3, ot_num,))
+        bead_pos_dset = ot_grp.create_dataset(
+            'bead_position', (nframes, 3, ot_num,))
+
+        for i in range(int(header[0] / header[1])):
+            # Get number of optical traps to know how many to read in
+            ot_num = np.fromfile(otf, np.int32, count=1)[0]
+            # Read optical trap data so we can parse the entire frame and
+            # store data
+            otraps = np.fromfile(otf, OTRAP_DT, count=ot_num)
+            # Store filament lengths for later data analysis
+            for ot in otraps:
+                ot_pos_dset[i, :, ot['attach_id'] - 1] = ot['pos']
+                bead_pos_dset[i, :, ot['attach_id'] - 1] = ot['bpos']
+
+
 def get_cpu_time_from_log(log_file):
     """!TODO: Docstring for get_cpu_time_from_log.
     @return: TODO
@@ -193,6 +247,26 @@ def get_cpu_time_from_log(log_file):
     return float(cpu_t)
 
 
+def parse_xlink_frame(xlink_data):
+    sb_list = [[], []]
+    db_list = [[], []]
+
+    for xl in xlink_data:
+        if xl['doubly']:
+            if (xl['anchors'][0]['attached_id'] ==
+                    xl['anchors'][1]['attached_id']):
+                print("WARNING: Anchors are attached to same filament.")
+            else:
+                for anch in xl['anchors']:
+                    if anch['attached_id'] < 0:
+                        print("WARNING: ",
+                              "Anchor not attached even though doubly bound.")
+                    else:
+                        db_list[anch['attached_id'] - 1] += [anch['lambda']]
+        elif xl['anchors'][0]['bound']:
+            sb_list[xl['anchors'][0]['attached_id'] -
+                    1] += [xl['anchors'][0]['lambda']]
+    return sb_list, db_list
+
+
 ##########################################
-if __name__ == "__main__":
-    print("Not implemented yet")

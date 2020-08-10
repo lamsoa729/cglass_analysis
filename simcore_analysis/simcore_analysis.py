@@ -148,12 +148,7 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
         if analysis_type != 'load' and ('xl_data' not in h5_data
                                         or 'filament_data' not in h5_data):
             print("ANALYSIS: Collecting data")
-            xl_name = p_dict['crosslink'][0]['name']
-            fil_name = p_dict['rigid_filament'][0]['name']
-            collect_data(h5_data,
-                         run_name + '_params.yaml',
-                         run_name + '_crosslink_' + xl_name + '.spec',
-                         run_name + '_rigid_filament_' + fil_name + '.posit')
+            collect_data(h5_data, run_name + '_params.yaml')
         print("ANALYSIS: Analyzing data")
         analyze_seed(h5_data)
         # Get run time statistics if they exist
