@@ -68,17 +68,21 @@ def collect_data(h5_data, param_file_name):
     run_name = p_dict['run_name']
 
     if isinstance(p_dict['rigid_filament'], list):
+        rg_fil_grp = h5_data.create_group('rigid_filament_data')
         for fil_p_dict in p_dict['rigid_filament']:
-            get_rigid_filament_data(h5_data, run_name, fil_p_dict)
+            get_rigid_filament_data(rg_fil_grp, run_name, fil_p_dict)
     if isinstance(p_dict['filament'], list):
+        # fil_grp = h5_data.create_group('filament_data')
         for fil_p_dict in p_dict['filament']:
             print("WARNING: Flexible filament analysis not implemented yet.")
     if isinstance(p_dict['crosslink'], list):
+        xl_grp = h5_data.create_group('crosslink_data')
         for xl_p_dict in p_dict['crosslink']:
-            get_xlink_data(h5_data, run_name, p_dict, xl_p_dict)
+            get_xlink_data(xl_grp, run_name, p_dict, xl_p_dict)
     if isinstance(p_dict['optical_trap'], list):
+        ot_grp = h5_data.create_group('optical_trap_data')
         for ot_p_dict in p_dict['optical_trap']:
-            get_optical_trap_data(h5_data, run_name, ot_p_dict)
+            get_optical_trap_data(ot_grp, run_name, ot_p_dict)
             # print("WARNING: Optical trap analysis not implemented yet.")
 
 
@@ -106,7 +110,7 @@ def get_xlink_data(h5_data, run_name, param_dict, xl_p_dict):
         header = np.fromfile(xlf, HEADER_DT, count=1)[0]
         print(header)
         nframes = int(header[0] / header[1])
-        xl_grp = h5_data.create_group(species_name + '_data')
+        xl_grp = h5_data.create_group(xl_name)
         xl_time_arr = np.arange(0, header[0], header[1]) * header[2]
         xl_grp.create_dataset('time', data=xl_time_arr)
 
@@ -159,7 +163,7 @@ def get_rigid_filament_data(h5_data, run_name, fil_p_dict):
     species_name = 'rigid_filament_' + fil_name
     fil_posit_fname = run_name + '_' + species_name + '.posit'
     print(fil_posit_fname)
-    fil_grp = h5_data.create_group(species_name + '_data')
+    fil_grp = h5_data.create_group(fil_name)
     for key, val in fil_p_dict.items():
         fil_grp.attrs[key] = val
 
@@ -215,7 +219,7 @@ def get_optical_trap_data(h5_data, run_name, ot_p_dict):
     ot_spec_fname = run_name + '_' + species_name + '.spec'
     print(ot_spec_fname)
 
-    ot_grp = h5_data.create_group(species_name + '_data')
+    ot_grp = h5_data.create_group(ot_name)
     for key, val in ot_p_dict.items():
         ot_grp.attrs[key] = val
 
