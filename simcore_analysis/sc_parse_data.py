@@ -40,6 +40,7 @@ FIL_DT = np.dtype([('pos', np.double, 3),
                    ('length', np.double),
                    ('mesh_id', np.int32),
                    ])
+
 SITE_DT = np.dtype([('pos', np.double, 3)])
 
 # FLEX_FIL_DT = np.dtype([()])
@@ -144,6 +145,15 @@ def get_xlink_data(h5_data, run_name, param_dict, xl_p_dict):
 
 
 def get_rigid_filament_data(h5_data, run_name, fil_p_dict):
+    """!Get data from rigid filament posit files. Includes lengths, mesh IDs,
+    position, and orientations
+
+    @param h5_data: hdf5 file to write too
+    @param run_name: Name of CGLASS run
+    @param fil_p_dict: Rigid filament parameter dictionary
+    @return: void, changes h5_data to include rigid filament data.
+
+    """
 
     fil_name = fil_p_dict['name']
     species_name = 'rigid_filament_' + fil_name
@@ -166,7 +176,6 @@ def get_rigid_filament_data(h5_data, run_name, fil_p_dict):
 
         lengths = [fil['length'] for fil in fils]
         mesh_ids = [fil['mesh_id'] for fil in fils]
-        print("mesh_ids: ", mesh_ids)
         fil_grp.attrs['lengths'] = lengths
         fil_grp.attrs['mesh_ids'] = mesh_ids
 
@@ -195,15 +204,16 @@ def get_rigid_filament_data(h5_data, run_name, fil_p_dict):
 def get_optical_trap_data(h5_data, run_name, ot_p_dict):
     """!Get data from optical trap spec files
 
-    @param h5_data: TODO
-    @param ot_spec_fname: TODO
-    @param ot_p_dict: TODO
-    @return: TODO
+    @param h5_data: hdf5 file to write too
+    @param run_name: Name of CGLASS run
+    @param ot_p_dict: Optical trap parameter dictionary
+    @return: void, changes h5_data to include optical traps
 
     """
     ot_name = ot_p_dict['name']
     species_name = 'optical_trap_' + ot_name
     ot_spec_fname = run_name + '_' + species_name + '.spec'
+    print(ot_spec_fname)
 
     ot_grp = h5_data.create_group(species_name + '_data')
     for key, val in ot_p_dict.items():
@@ -212,6 +222,7 @@ def get_optical_trap_data(h5_data, run_name, ot_p_dict):
     with open(ot_spec_fname, 'rb') as otf:
         header = np.fromfile(otf, HEADER_DT, count=1)[0]
         print(header)
+        nframes = int(header[0] / header[1])  # Get number of frames to read
 
         data_start = otf.tell()
 
@@ -224,7 +235,6 @@ def get_optical_trap_data(h5_data, run_name, ot_p_dict):
         otf.seek(data_start)
         # ot_num = 2  # TODO: Hard coded for the moment
 
-        nframes = int(header[0] / header[1])  # Get number of frames to read
         ot_time_arr = np.arange(0, header[0], header[1]) * header[2]
 
         ot_grp.create_dataset('time', data=ot_time_arr)
@@ -233,9 +243,15 @@ def get_optical_trap_data(h5_data, run_name, ot_p_dict):
         bead_pos_dset = ot_grp.create_dataset(
             'bead_position', (nframes, 3, ot_num,))
 
+        print(nframes)
         for i in range(nframes):
             # Get number of optical traps to know how many to read in
-            ot_num = np.fromfile(otf, np.int32, count=1)[0]
+            try:
+                ot_num = np.fromfile(otf, np.int32, count=1)[0]
+            except BaseException:
+                print(" Could not get number of optical traps."
+                      " Possibly hit end of file.")
+                break
             # Read optical trap data so we can parse the entire frame and
             # store data
             otraps = np.fromfile(otf, OTRAP_DT, count=ot_num)
@@ -276,7 +292,6 @@ def parse_xlink_frame(xlink_data):
                         print("WARNING: ",
                               "Anchor not attached even though doubly bound.")
                     else:
-                        print(anch['attached_id'])
                         db_list[anch['attached_id'] - 1] += [anch['lambda']]
         elif xl['anchors'][0]['bound']:
             sb_list[xl['anchors'][0]['attached_id'] -
