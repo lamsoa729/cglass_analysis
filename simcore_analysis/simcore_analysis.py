@@ -11,9 +11,8 @@ import argparse
 from pathlib import Path
 import h5py
 import yaml
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, FFMpegWriter
+from matplotlib.animation import FFMpegWriter
 
 from .sc_parse_data import collect_data, get_cpu_time_from_log
 from .sc_analyze_seed import (analyze_seed)
@@ -21,32 +20,43 @@ from .sc_analyze_seed_scan import analyze_seed_scan, collect_seed_h5_files
 from .sc_analyze_param_scan import collect_param_h5_files
 from .sc_analyze_run import analyze_run
 from .sc_seed_data import SeedData
-from .sc_graphs import graph_2d_rod_diagram, sc_graph_all_data_2d
-from .sc_animation_funcs import make_sc_animation, make_sc_animation_min
+from .sc_animation_funcs import make_sc_animation_min
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(prog='simcore_analysis.py',
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        prog='simcore_analysis.py',
+        formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("input", default=None,
                         help="Input for Simcore Analysis functions.")
     parser.add_argument("-a ", "--analysis", type=str, default='analyze',
-                        help=" Specify analysis type to determine if data will "
-                        "be overwritten. Options include "
+                        help=" Specify analysis type to determine if data will"
+                        " be overwritten. Options include "
                         "(overwrite, analyze(default), or load.")
     parser.add_argument("-s", "--seed", action="store_true", default=False,
                         help=("Run a single seed analysis. "
                               "Input is a parameter file name."))
-    parser.add_argument("-S", "--seed_scan", action="store_true", default=False,
-                        help=("Collect hdf5 data files from a directory tree "
-                              "and create a file based on statistics of seed runs. "
-                              "Input is the directory that holds seed directories."))
-    parser.add_argument("-R", "--run", action="store_true", default=False,
-                        help=("Create hdf5 files for both seed and parameter "
-                              "scans. All seeds must be analyzed first."
-                              "Input is parameter you wish to analyze."))
+    parser.add_argument(
+        "-T", "--run_type", type=str, default="single_seed",
+        help=(
+            "simcore_analysis can analyze multiple simulations and aggregate "
+            "data according to various schemes. The 'run_type' argument "
+            "specifies how to collect the data from nested data directories.\n"
+            "Options:"
+            "\tsingle_seed\n"
+            "\tmulti_seed\n"
+            "\tparam_scan\n"
+            "\tparam_single_scan\n"
+        ))
+
+    parser.add_argument(
+        "-A", "--assay_type", type=str, default="fixed-OT",
+        help=(
+            "Different experimental assays require different analysis. "
+            "The 'assay_type' specifies what analysis to run on simulations."
+        ))
     parser.add_argument("--spec", type=str, default='',
-                        help=(" Specify if parameter used in param scan or "
+                        help=("Specify if parameter used in param scan or "
                               "full run anlaysis is a specific species "
                               "parameter. e.g. 'crosslink' "))
     parser.add_argument("-m", "--movie", action="store_true", default=False,
@@ -175,7 +185,7 @@ def make_animation(param_file):
     sd_data = SeedData(param_file)
     Writer = FFMpegWriter
     writer = Writer(fps=25, metadata=dict(artist='Me'), bitrate=1800)
-    anim = make_sc_animation_min(sd_data, writer)
+    make_sc_animation_min(sd_data, writer)
 
 
 def make_graph(param_file):
@@ -227,9 +237,9 @@ def main():
             make_animation(opts.input)
         if opts.graph:
             make_graph(opts.input)
-    elif opts.seed_scan:
+    elif opts.run_type == 'seed_scan':
         run_seed_scan_analysis(opts.input, opts.analysis)
-    elif opts.run:
+    elif opts.run_type == 'param_scan':
         if opts.spec != '':
             run_full_tree_analysis(opts.input, opts.spec, opts.analysis)
         else:
