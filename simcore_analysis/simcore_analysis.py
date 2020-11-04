@@ -9,6 +9,7 @@ Description:
 
 import argparse
 from pathlib import Path
+
 import h5py
 import yaml
 import matplotlib.pyplot as plt
@@ -21,21 +22,26 @@ from .sc_analyze_param_scan import collect_param_h5_files
 from .sc_analyze_run import analyze_run
 from .sc_seed_data import SeedData
 from .sc_animation_funcs import make_sc_animation_min
+from .ot_fix_graphs import graph_fixed_OT_assays
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         prog='simcore_analysis.py',
         formatter_class=argparse.RawTextHelpFormatter)
+
     parser.add_argument("input", default=None,
-                        help="Input for Simcore Analysis functions.")
-    parser.add_argument("-a ", "--analysis", type=str, default='analyze',
+                        help="Path used in Simcore Analysis functions.")
+
+    parser.add_argument("-a ", "--analysis", type=str, default=None,
                         help=" Specify analysis type to determine if data will"
                         " be overwritten. Options include "
                         "(overwrite, analyze(default), or load.")
-    parser.add_argument("-s", "--seed", action="store_true", default=False,
-                        help=("Run a single seed analysis. "
-                              "Input is a parameter file name."))
+    parser.add_argument("-m", "--movie", action="store_true", default=False,
+                        help=("Create an animation from a seed."))
+    parser.add_argument("-g", "--graph", action="store_true", default=False,
+                        help=("Create graph of a seed's end state."))
+
     parser.add_argument(
         "-T", "--run_type", type=str, default="single_seed",
         help=(
@@ -48,22 +54,23 @@ def parse_args():
             "\tparam_scan\n"
             "\tparam_single_scan\n"
         ))
-
     parser.add_argument(
         "-A", "--assay_type", type=str, default="fixed-OT",
         help=(
             "Different experimental assays require different analysis. "
             "The 'assay_type' specifies what analysis to run on simulations."
         ))
+    parser.add_argument(
+        "-P", "--param", type=str, default=None,
+        help=("Parameter to use in analysis or graphing functions."))
     parser.add_argument("--spec", type=str, default='',
                         help=("Specify if parameter used in param scan or "
                               "full run anlaysis is a specific species "
                               "parameter. e.g. 'crosslink' "))
-    parser.add_argument("-m", "--movie", action="store_true", default=False,
-                        help=("Create an animation from a seed."))
-    parser.add_argument("-g", "--graph", action="store_true", default=False,
-                        help=("Create graph of a seed's end state."))
     opts = parser.parse_args()
+
+    # Post parsing changes to options
+    opts.input = Path(opts.input)
     return opts
 
 
@@ -140,6 +147,10 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
     @return: TODO
 
     """
+    if analysis_type is None:
+        print("Not running analysis.")
+        return
+
     with open(param_file, 'r') as pf:
         p_dict = yaml.safe_load(pf)
     run_name = p_dict['run_name']
@@ -188,34 +199,29 @@ def make_animation(param_file):
     make_sc_animation_min(sd_data, writer)
 
 
-def make_graph(param_file):
+def run_analysis(opts):
+    if opts.run_type == 'single_seed':
+        run_seed_analysis(opts.input, opts.analysis)
+        # graph_single_seed(opts.input, opts.graph)
+    elif opts.run_type == 'multi_seed':
+        run_seed_scan_analysis(opts.input, opts.analysis)
+        # graph_multi_seed(opts.input, opts.graph)
+    elif opts.run_type == 'param_scan':
+        if opts.spec != '':
+            run_full_tree_analysis(opts.input, opts.spec, opts.analysis)
+        else:
+            run_full_tree_analysis(opts.input, analysis_type=opts.analysis)
+    else:
+        raise IOError('No valid analysis type was given.')
+
+
+def make_graphs(opts):
     """!TODO: Docstring for run_make_animation.
     @return: TODO
 
     """
-    try:
-        sd_data = SeedData(param_file)
-        graph_stl = {
-            "axes.titlesize": 18,
-            "axes.labelsize": 15,
-            "xtick.labelsize": 15,
-            "ytick.labelsize": 15,
-            "font.size": 15
-        }
-        with plt.style.context(graph_stl):
-            plt.style.use(graph_stl)
-            fig, axarr = plt.subplots(1, 2, figsize=(10, 4))
-            sd_data.animate(-1, fig, axarr)
-            # graph_2d_rod_diagram(0, fig, axarr, sd_data)
-            plt.show()
-
-    except BaseException:
-        print("ANALYSIS: graph failed")
-        raise
-    finally:
-        sd_data.save()
-
-    print("You will make a graph someday.")
+    if opts.assay_type == 'fixed-OT':
+        graph_fixed_OT_assays(opts)
 
 
 def main():
@@ -231,22 +237,11 @@ def main():
 
     """
     opts = parse_args()
-    if opts.seed:
-        run_seed_analysis(opts.input, opts.analysis)
-        if opts.movie:
-            make_animation(opts.input)
-        if opts.graph:
-            make_graph(opts.input)
-    elif opts.run_type == 'seed_scan':
-        run_seed_scan_analysis(opts.input, opts.analysis)
-    elif opts.run_type == 'param_scan':
-        if opts.spec != '':
-            run_full_tree_analysis(opts.input, opts.spec, opts.analysis)
-        else:
-            run_full_tree_analysis(opts.input, analysis_type=opts.analysis)
+    if opts.analysis:
+        run_analysis(opts)
 
-    else:
-        raise IOError('No valid analysis type was given.')
+    if opts.graph:
+        make_graphs(opts)
 
 
 ##########################################
