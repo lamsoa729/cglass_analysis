@@ -53,7 +53,6 @@ def get_suff(path):
     """ Get the suffix from a parameter directory path. """
     scinote = re.compile(r'[+-]?\d+(?:\.?\d*(?:[eE][+-]?\d+)?)?')
     patterns = re.findall(scinote, str(path))
-    print(patterns)
     return float(patterns[-1])  # only return the last one for now
 
 

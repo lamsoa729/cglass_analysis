@@ -33,35 +33,41 @@ def parse_args():
     parser.add_argument("input", default=None,
                         help="Path used in Simcore Analysis functions.")
 
-    parser.add_argument("-a ", "--analysis", type=str, default=None,
+    parser.add_argument("-A ", "--analysis",
+                        choices=[None, 'load', 'analyze', 'overwrite'],
+                        default=None,
                         help=" Specify analysis type to determine if data will"
                         " be overwritten. Options include "
                         "(overwrite, analyze(default), or load.")
-    parser.add_argument("-m", "--movie", action="store_true", default=False,
+    parser.add_argument("-M", "--movie", action="store_true", default=False,
                         help=("Create an animation from a seed."))
-    parser.add_argument("-g", "--graph", action="store_true", default=False,
+    parser.add_argument("-G", "--graph", action="store_true", default=False,
                         help=("Create graph of a seed's end state."))
 
     parser.add_argument(
-        "-T", "--run_type", type=str, default="single_seed",
+        "-r", "--run_type", type=str,
+        choices=['single_seed',
+                 'multi_seed',
+                 'param_scan',
+                 'param_single_scan'],
+        default="single_seed",
         help=(
             "simcore_analysis can analyze multiple simulations and aggregate "
             "data according to various schemes. The 'run_type' argument "
             "specifies how to collect the data from nested data directories.\n"
-            "Options:"
-            "\tsingle_seed\n"
-            "\tmulti_seed\n"
-            "\tparam_scan\n"
-            "\tparam_single_scan\n"
         ))
+    # TODO make this a subparser actually
     parser.add_argument(
-        "-A", "--assay_type", type=str, default="fixed-OT",
+        "-a", "--assay_type", type=str,
+        choices=['fixed-OT'],
+        default="fixed-OT",
         help=(
             "Different experimental assays require different analysis. "
             "The 'assay_type' specifies what analysis to run on simulations."
         ))
+
     parser.add_argument(
-        "-P", "--param", type=str, default=None,
+        "-p", "--param", type=str, default=None,
         help=("Parameter to use in analysis or graphing functions."))
     parser.add_argument("--spec", type=str, default='',
                         help=("Specify if parameter used in param scan or "
@@ -71,6 +77,8 @@ def parse_args():
 
     # Post parsing changes to options
     opts.input = Path(opts.input)
+    opts.data_dir = Path.cwd() / 'data'
+
     return opts
 
 

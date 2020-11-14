@@ -35,20 +35,29 @@ nM_fp = 1147.604948473  # nM for PDE and ME simulations
 
 
 def graph_fixed_OT_assays(opts):
-    if opts.run_type == 'single_seed':
-        graph_seed_smoothed_interval(opts.input)
-        print("Make single seed graphs.")
-    elif opts.run_type == 'mulit_seed':
-        graph_multi_seed_force_intervals(opts.input)
-        print("Make multi seed graphs")
-    elif opts.run_type == 'param_scan':
-        graph_param_scan_ot_force(opts)
-        print("Make param scan graphs.")
-    else:
-        raise IOError('No valid run type was given.')
+    with plt.style.context(otrap_sty):
+        plt.style.use(otrap_sty)
+        if not opts.data_dir.exists():
+            opts.data_dir.mkdir()
+        if opts.run_type == 'single_seed':
+            graph_seed_smoothed_interval(opts.input, opts.data_dir)
+            print("Make single seed graphs.")
+        elif opts.run_type == 'multi_seed':
+            graph_multi_seed_force_intervals(opts.input, opts.data_dir)
+            print("Make multi seed graphs")
+        elif opts.run_type == 'param_scan':
+            graph_param_scan_ot_force(opts)
+            param_dirs = sorted(Path(opts.input).glob(opts.param + '*'),
+                                key=get_suff)
+            for pdir in param_dirs:
+                graph_multi_seed_force_intervals(
+                    pdir, opts.data_dir,
+                    'multi_seed_force_intervals_' + pdir.name)
+        else:
+            raise IOError("No run type or incorrect run type was given.")
 
 
-def graph_seed_smoothed_interval(data_path):
+def graph_seed_smoothed_interval(data_path, data_dir):
     """TODO: Docstring for graph_seed_smoothed_interval.
 
     @param ot_path TODO
@@ -64,8 +73,10 @@ def graph_seed_smoothed_interval(data_path):
             h5_data, species_name='filament-trap')
         dt = time_arr[1] - time_arr[0]
         ot_force_smooth = savgol_filter(-ot_force[:, 1], 45, 3)
-        ot_force_deriv, _, pos_lengths, neg_lengths = collect_contiguous_intervals(
-            ot_force_smooth, dt)
+        (ot_force_deriv,
+         _,
+         pos_lengths,
+         neg_lengths) = collect_contiguous_intervals(ot_force_smooth, dt)
 
         fig, axarr = plt.subplots(2, 3, figsize=(18, 10))
 
@@ -95,6 +106,7 @@ def graph_seed_smoothed_interval(data_path):
         axarr[1, 0].set_ylabel("Number of intervals")
 
         plt.tight_layout()
+        fig.savefig(data_dir / 'smoothed_interval.png')
     except BaseException:
         raise
     finally:
@@ -105,7 +117,8 @@ def graph_seed_smoothed_interval(data_path):
 ########################
 
 
-def graph_multi_seed_force_intervals(param_path):
+def graph_multi_seed_force_intervals(param_path, data_dir,
+                                     save_name='multi_seed_force_intervals'):
     """TODO: Docstring for graph_param_scan_force_interval.
 
     @param arg1 TODO
@@ -129,7 +142,7 @@ def graph_multi_seed_force_intervals(param_path):
             ot_force_smooth = savgol_filter(-ot_force[:, 1], 45, 3)
             axarr[0].plot(time * sec, ot_force_smooth * pN)
 
-            ot_force_deriv, contig_arr, pos_lengths, neg_lengths = collect_contiguous_intervals(
+            _, _, pos_lengths, neg_lengths = collect_contiguous_intervals(
                 ot_force_smooth, dt)
             if pos_length_arr is None:
                 pos_length_arr = pos_lengths
@@ -160,26 +173,11 @@ def graph_multi_seed_force_intervals(param_path):
         ax.set_xlabel("Time (sec)")
 
     plt.tight_layout()
+    fig.savefig(data_dir / (save_name + '.png'))
 
 ########################
 #  Param scan figures  #
 ########################
-
-
-def graph_param_scan_ot_force(opts):
-    """TODO: Docstring for graph_param_scan_ot_force.
-
-    @param opts TODO
-    @return: TODO
-
-    """
-    if opts.param is None:
-        raise IOError("No parameter was given to graph parameter scan.")
-
-    param_dirs = sorted(Path(opts.input).glob(opts.param), key=get_suff)
-    fig, axarr = plt.subplots(1, 2, figsize=(14, 5))
-    param_scan_force_plot(axarr, param_dirs, opts.param)
-    fig.save
 
 
 def param_scan_force_plot(axarr, param_dirs, param_name=''):
@@ -216,6 +214,23 @@ def param_scan_force_plot(axarr, param_dirs, param_name=''):
     axarr[1].set_xlabel('Time $t$ (sec)')
     axarr[0].set_ylabel('Force $F_x$ (pN)')
     axarr[1].legend(loc='center left', bbox_to_anchor=(1.05, .5))
+
+
+def graph_param_scan_ot_force(opts):
+    """TODO: Docstring for graph_param_scan_ot_force.
+
+    @param opts TODO
+    @return: TODO
+
+    """
+    if opts.param is None:
+        raise IOError("No parameter was given to graph parameter scan.")
+
+    param_dirs = sorted(Path(opts.input).glob(opts.param + '*'), key=get_suff)
+    fig, axarr = plt.subplots(1, 2, figsize=(14, 5))
+    param_scan_force_plot(axarr, param_dirs, opts.param)
+    plt.tight_layout()
+    fig.savefig(opts.data_dir / 'param_scan_force.png')
 
 
 # End #########################################
