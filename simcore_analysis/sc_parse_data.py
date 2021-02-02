@@ -104,7 +104,7 @@ def get_xlink_data(h5_data, run_name, param_dict, xl_p_dict):
     xl_name = xl_p_dict['name']
     species_name = 'crosslink_' + xl_name
     xlink_spec_fname = run_name + '_' + species_name + '.spec'
-    print(xlink_spec_fname)
+    print("---- " + xlink_spec_fname + " header ----")
 
     with open(xlink_spec_fname, 'rb') as xlf:
         header = np.fromfile(xlf, HEADER_DT, count=1)[0]
@@ -162,7 +162,7 @@ def get_rigid_filament_data(h5_data, run_name, fil_p_dict):
     fil_name = fil_p_dict['name']
     species_name = 'rigid_filament_' + fil_name
     fil_posit_fname = run_name + '_' + species_name + '.posit'
-    print(fil_posit_fname)
+    print("---- " + fil_posit_fname + " header ----")
     fil_grp = h5_data.create_group(fil_name)
     for key, val in fil_p_dict.items():
         fil_grp.attrs[key] = val
@@ -217,7 +217,7 @@ def get_optical_trap_data(h5_data, run_name, ot_p_dict):
     ot_name = ot_p_dict['name']
     species_name = 'optical_trap_' + ot_name
     ot_spec_fname = run_name + '_' + species_name + '.spec'
-    print(ot_spec_fname)
+    print("---- " + ot_spec_fname + " header ----")
 
     ot_grp = h5_data.create_group(ot_name)
     for key, val in ot_p_dict.items():
