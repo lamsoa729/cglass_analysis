@@ -78,7 +78,8 @@ def collect_data(h5_data, param_file_name):
     if isinstance(p_dict['crosslink'], list):
         xl_grp = h5_data.create_group('crosslink_data')
         for xl_p_dict in p_dict['crosslink']:
-            get_xlink_data(xl_grp, run_name, p_dict, xl_p_dict)
+            if xl_p_dict['concentration'] > 0:
+                get_xlink_data(xl_grp, run_name, p_dict, xl_p_dict)
     if isinstance(p_dict['optical_trap'], list):
         ot_grp = h5_data.create_group('optical_trap_data')
         for ot_p_dict in p_dict['optical_trap']:
@@ -114,8 +115,10 @@ def get_xlink_data(h5_data, run_name, param_dict, xl_p_dict):
         xl_time_arr = np.arange(0, header[0], header[1]) * header[2]
         xl_grp.create_dataset('time', data=xl_time_arr)
 
-        for key, val in xl_p_dict.items():
-            xl_grp.attrs[key] = val
+        xl_grp.attrs['params'] = yaml.dump(xl_p_dict)
+
+        # for key, val in xl_p_dict.items():
+        # xl_grp.attrs[key] = val
         # Create a variable length data type
         xl_type = h5py.special_dtype(vlen=np.dtype(np.double))
         # Create a data set that can store all the frames of the doubly bound
@@ -128,6 +131,8 @@ def get_xlink_data(h5_data, run_name, param_dict, xl_p_dict):
                                             dtype=xl_type)
 
         # Loop over number of frames which is the time / time step
+        dbl_xlink_num = []
+        sb_xlink_num = []
         for i in range(nframes):
             # Get number of crosslinks from file so we know how many to read in
             # next step
@@ -139,13 +144,21 @@ def get_xlink_data(h5_data, run_name, param_dict, xl_p_dict):
             # Load frame data for singly bound xlinks
             xl_sgl_dset[i, 0] = sb_xlinks[:][0]
             xl_sgl_dset[i, 1] = sb_xlinks[:][1]
+            sb_xlink_num += [[len(sb_xlinks[:][0]), len(sb_xlinks[:][1])]]
             # Load frame data for doubly bound xlinks
             xl_dbl_dset[i, 0] = db_xlinks[:][0]
             xl_dbl_dset[i, 1] = db_xlinks[:][1]
+            dbl_xlink_num += [len(db_xlinks[:][0])]
         # Subtract half the length of the filament from the lambda position so
         # zero corresponds to center of the filament.
         xl_sgl_dset[...] -= half_length
         xl_dbl_dset[...] -= half_length
+        # xl_dbl_dset.attrs['dbl_xlink_num_arr'] = np.asarray(dbl_xlink_num)
+        # xl_sgl_dset.attrs['sgl_xlink_num_arr'] = np.asarray(sb_xlink_num)
+        dbl_num_dset = xl_grp.create_dataset(
+            'singly_bound_num', data=sb_xlink_num)
+        dbl_num_dset = xl_grp.create_dataset(
+            'doubly_bound_num', data=dbl_xlink_num)
 
 
 def get_rigid_filament_data(h5_data, run_name, fil_p_dict):
@@ -296,10 +309,16 @@ def parse_xlink_frame(xlink_data):
                         print("WARNING: ",
                               "Anchor not attached even though doubly bound.")
                     else:
-                        db_list[anch['attached_id'] - 1] += [anch['lambda']]
+                        # print("double bound",
+                        #       xl['anchors'][0]['attached_id'],
+                        #       xl['anchors'][1]['attached_id'])
+                        db_list[anch['attached_id'] - 2] += [anch['lambda']]
         elif xl['anchors'][0]['bound']:
+            # print("single bound",
+            #       xl['anchors'][0]['attached_id'],
+            #       xl['anchors'][1]['attached_id'])
             sb_list[xl['anchors'][0]['attached_id'] -
-                    1] += [xl['anchors'][0]['lambda']]
+                    2] += [xl['anchors'][0]['lambda']]
     return sb_list, db_list
 
 

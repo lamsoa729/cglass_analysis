@@ -179,7 +179,7 @@ def run_seed_analysis(param_file=None, analysis_type='analyze'):
             print("ANALYSIS: Collecting data")
             collect_data(h5_data, run_name + '_params.yaml')
         print("ANALYSIS: Analyzing data")
-        analyze_seed(h5_data)
+        # analyze_seed(h5_data)
         # Get run time statistics if they exist
         time_anal_flag = p_dict.get('time_analysis', False)
         if time_anal_flag:
